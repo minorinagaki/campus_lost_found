@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>분실물 등록 | 교내 분실물 찾기</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">교내 분실물 찾기</a>
+    <a class="button button-light" href="{{ url_for('index') }}">목록으로</a>
+  </header>
+
+  <main class="container form-container">
+    <section class="hero compact">
+      <p class="eyebrow">REGISTER AN ITEM</p>
+      <h1>분실물 등록하기</h1>
+      <p class="hero-copy">발견한 물건의 정보를 입력해 주세요.</p>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="notice {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="form-card">
+      <label>
+        <span>물건 이름 *</span>
+        <input type="text" name="title" maxlength="100" required placeholder="예: 검은색 우산" value="{{ form.get('title', '') }}">
+      </label>
+      <div class="form-row">
+        <label>
+          <span>종류 *</span>
+          <select name="category" required>
+            <option value="">선택해 주세요</option>
+            {% for c in categories %}
+              <option value="{{ c }}" {% if form.get('category') == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>발견 장소 *</span>
+          <select name="location" required>
+            <option value="">선택해 주세요</option>
+            {% for loc in locations %}
+              <option value="{{ loc }}" {% if form.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <label>
+        <span>발견 날짜 *</span>
+        <input type="date" name="found_date" required value="{{ form.get('found_date', today) }}">
+      </label>
+      <label>
+        <span>물건 설명 *</span>
+        <textarea name="description" rows="5" maxlength="1000" required placeholder="색상, 특징 등 공개해도 괜찮은 정보를 입력하세요.">{{ form.get('description', '') }}</textarea>
+      </label>
+      <p class="form-help">이름, 학번, 전화번호 등 개인정보는 입력하지 마세요. 소유자 확인에 필요한 특별한 특징은 공개하지 않는 것이 안전합니다.</p>
+      <div class="form-actions">
+        <a class="button button-outline" href="{{ url_for('index') }}">취소</a>
+        <button class="button button-dark" type="submit">등록하기</button>
+      </div>
+    </form>
+  </main>
+  <footer>교내 분실물 찾기 · 학생들을 위한 공유 공간</footer>
+</body>
+</html>

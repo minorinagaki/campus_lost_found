@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>교내 분실물 찾기</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">교내 분실물 찾기</a>
+    <a class="button button-light" href="{{ url_for('add_item') }}">+ 분실물 등록</a>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">CAMPUS LOST & FOUND</p>
+      <h1>잃어버린 물건을<br>함께 찾아요.</h1>
+      <p class="hero-copy">교내에서 발견한 물건을 등록하고, 분실물 정보를 검색해 보세요.</p>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="notice {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="search-panel">
+      <form method="get" action="{{ url_for('index') }}" class="filters">
+        <label class="search-field">
+          <span>검색어</span>
+          <input type="text" name="q" value="{{ q }}" placeholder="물건 이름이나 특징을 입력하세요">
+        </label>
+        <label>
+          <span>종류</span>
+          <select name="category">
+            <option value="">전체 종류</option>
+            {% for c in categories %}
+              <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>습득 장소</span>
+          <select name="location">
+            <option value="">전체 장소</option>
+            {% for loc in locations %}
+              <option value="{{ loc }}" {% if selected_location == loc %}selected{% endif %}>{{ loc }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>상태</span>
+          <select name="status">
+            <option value="">전체 상태</option>
+            {% for s in ["보관 중", "주인 확인 중", "반환 완료"] %}
+              <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button class="button button-dark" type="submit">검색하기</button>
+        <a class="reset-link" href="{{ url_for('index') }}">초기화</a>
+      </form>
+    </section>
+
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">FOUND ITEMS</p>
+        <h2>등록된 분실물</h2>
+      </div>
+      <span class="count">{{ items|length }}개</span>
+    </div>
+
+    {% if items %}
+      <section class="item-grid">
+        {% for item in items %}
+          <article class="item-card">
+            <div class="item-symbol">{{ {"전자기기":"⌁", "지갑·카드":"▤", "의류·가방":"▧", "문구류":"✎", "우산":"☂", "열쇠":"⚿", "기타":"＋"}.get(item.category, "＋") }}</div>
+            <div class="item-topline">
+              <span class="category">{{ item.category }}</span>
+              <span class="status status-{{ 'done' if item.status == '반환 완료' else 'waiting' if item.status == '주인 확인 중' else 'stored' }}">{{ item.status }}</span>
+            </div>
+            <h3>{{ item.title }}</h3>
+            <p class="description">{{ item.description }}</p>
+            <div class="item-meta">
+              <span>📍 {{ item.location }}</span>
+              <span>📅 {{ item.found_date }}</span>
+            </div>
+            <details class="manage-details">
+              <summary>관리</summary>
+              <form method="post" action="{{ url_for('update_status', item_id=item.id) }}" class="status-form">
+                <select name="status" aria-label="상태 변경">
+                  {% for s in ["보관 중", "주인 확인 중", "반환 완료"] %}
+                    <option value="{{ s }}" {% if item.status == s %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+                <button class="button button-small" type="submit">변경</button>
+              </form>
+              <form method="post" action="{{ url_for('delete_item', item_id=item.id) }}" onsubmit="return confirm('정말 삭제할까요?');">
+                <button class="delete-link" type="submit">게시글 삭제</button>
+              </form>
+            </details>
+          </article>
+        {% endfor %}
+      </section>
+    {% else %}
+      <section class="empty-state">
+        <div class="empty-icon">⌕</div>
+        <h3>검색 결과가 없습니다.</h3>
+        <p>검색어를 바꾸거나 새로운 분실물 정보를 등록해 주세요.</p>
+        <a class="button button-dark" href="{{ url_for('add_item') }}">분실물 등록하기</a>
+      </section>
+    {% endif %}
+
+    <p class="privacy-note">개인정보나 연락처를 게시글에 공개하지 마세요. 물건의 소유 여부는 특징을 확인한 뒤 안전하게 확인하세요.</p>
+  </main>
+  <footer>교내 분실물 찾기 · 학생들을 위한 공유 공간</footer>
+</body>
+</html>

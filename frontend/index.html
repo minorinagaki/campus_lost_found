@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f4ec">
+  <meta name="description" content="캠퍼스에서 잃어버린 물건을 찾고, 발견한 물건을 알리는 교내 분실물 안내 데모입니다.">
+  <title>다시, 제자리 — 교내 분실물 찾기</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="다시, 제자리 홈">
+      <span class="brand-mark" aria-hidden="true">ㄷ</span>
+      <span><strong>다시, 제자리</strong><small>우리 캠퍼스 분실물 안내</small></span>
+    </a>
+    <nav class="top-nav" aria-label="주요 메뉴">
+      <a href="#find">물건 찾기</a><a href="#share">분실·습득 알리기</a>
+    </nav>
+    <span class="campus-tag"><span aria-hidden="true">✳</span> 우리 캠퍼스</span>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-dot"></span> 잃어버린 마음까지 돌아오도록</p>
+        <h1 id="hero-title">어떻게 찾을까,<br><span>어떻게 알릴까?</span></h1>
+        <p class="hero-lede">잠깐 놓친 물건도, 누군가의 작은 배려도<br class="desktop-break"> 캠퍼스 안에서 다시 만날 수 있게.</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="#find">물건 찾아보기 <span aria-hidden="true">↘</span></a>
+          <button class="button button-light" type="button" data-open-form="lost">분실물 알리기 <span aria-hidden="true">＋</span></button>
+        </div>
+        <div class="hero-note"><span class="note-icon" aria-hidden="true">♡</span><span>연락처나 학번 없이<br><strong>필요한 정보만</strong> 나눠요.</span></div>
+      </div>
+      <div class="hero-art" aria-label="분실물을 서로 찾아주는 캠퍼스 풍경">
+        <div class="sun"></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="art-label label-top"><span aria-hidden="true">✦</span> 찾았어요!</div>
+        <div class="art-board"><div class="board-top"><span>오늘의 캠퍼스</span><span>MON — FRI</span></div>
+          <div class="path-line"></div><div class="pin pin-one"><span class="pin-icon">✿</span><span>도서관</span></div>
+          <div class="pin pin-two"><span class="pin-icon">⌂</span><span>학생회관</span></div>
+          <div class="mini-card"><span class="mini-sticker">FOUND</span><span class="mini-object" aria-hidden="true">☂</span><span class="mini-copy"><strong>투명 우산</strong><small>학생회관 앞 · 10분 전</small></span><span class="mini-heart">♡</span></div>
+          <div class="art-spark spark-a">✳</div><div class="art-spark spark-b">✦</div>
+        </div>
+        <p class="art-caption">누군가의 오늘을<br>다시 이어주는 곳</p>
+      </div>
+      <div class="hero-bottom"><span>LOST &amp; FOUND, TOGETHER</span><span>SCROLL TO EXPLORE ↓</span></div>
+    </section>
+
+    <section class="find-section section-wrap" id="find" aria-labelledby="find-title">
+      <div class="section-heading">
+        <div><p class="eyebrow"><span class="eyebrow-dot"></span> CAMPUS BOARD</p><h2 id="find-title">혹시 여기 있을까요<span class="heading-period">.</span></h2><p class="section-intro">키워드나 장소로 찾아보세요. 작은 단서가 큰 도움이 돼요.</p></div>
+        <div class="board-count"><strong id="total-count">0</strong><span>개의 소식</span></div>
+      </div>
+      <div class="filter-panel" role="search" aria-label="분실물 게시물 검색 및 필터">
+        <label class="search-box" for="keyword"><span aria-hidden="true">⌕</span><span class="sr-only">키워드 검색</span><input id="keyword" type="search" placeholder="물건 이름이나 설명을 검색해요" autocomplete="off"><kbd>⌘ K</kbd></label>
+        <label class="filter-select"><span class="filter-label">종류</span><select id="kind-filter" aria-label="물건 종류"><option value="all">전체 종류</option></select></label>
+        <label class="filter-select"><span class="filter-label">장소</span><select id="place-filter" aria-label="발견 또는 분실 장소"><option value="all">전체 장소</option></select></label>
+        <fieldset class="type-filter"><legend class="sr-only">게시물 유형</legend>
+          <label><input type="radio" name="post-type" value="all" checked><span>전체</span></label>
+          <label><input type="radio" name="post-type" value="lost"><span>분실</span></label>
+          <label><input type="radio" name="post-type" value="found"><span>습득</span></label>
+        </fieldset>
+        <button class="reset-button" id="reset-filters" type="button">초기화 <span aria-hidden="true">↺</span></button>
+      </div>
+      <div class="results-line"><p id="result-summary" aria-live="polite">소식을 불러오는 중이에요.</p><span class="results-decoration" aria-hidden="true">— — ✳ — —</span></div>
+      <div class="post-grid" id="post-list" aria-live="polite" aria-busy="false"></div>
+      <div class="empty-state" id="empty-state" hidden><span aria-hidden="true">☁</span><h3>아직 찾는 소식이 없어요</h3><p>검색어나 필터를 바꿔 보거나, 새 소식을 알려주세요.</p><button class="button button-dark" type="button" id="empty-reset">검색 초기화</button></div>
+    </section>
+
+    <section class="share-section" id="share" aria-labelledby="share-title">
+      <div class="share-inner">
+        <div class="share-symbol" aria-hidden="true"><span>＋</span><i>✳</i></div>
+        <div class="share-copy"><p class="eyebrow"><span class="eyebrow-dot"></span> PASS IT ON</p><h2 id="share-title">찾는 사람이 있다면,<br><span>당신의 소식이 닿도록.</span></h2><p>잃어버린 물건도, 주인을 기다리는 물건도<br>간단한 정보로 함께 나눠요.</p></div>
+        <div class="share-actions"><button class="button button-dark" type="button" data-open-form="lost">물건을 잃어버렸어요 <span aria-hidden="true">↗</span></button><button class="button button-outline" type="button" data-open-form="found">물건을 주웠어요 <span aria-hidden="true">↗</span></button><small>연락처와 학번은 입력하지 않아요.</small></div>
+      </div>
+    </section>
+
+    <section class="form-section section-wrap" id="report-form" aria-labelledby="form-title" hidden>
+      <div class="form-heading"><div><p class="eyebrow"><span class="eyebrow-dot"></span> YOUR NOTE</p><h2 id="form-title">소식 남기기<span class="heading-period">.</span></h2><p class="section-intro" id="form-intro">필요한 정보만 적어주세요.</p></div><button class="close-form" id="close-form" type="button" aria-label="등록 양식 닫기">×</button></div>
+      <form id="report-entry" novalidate>
+        <div class="form-type" role="group" aria-label="게시물 유형"><button type="button" class="form-type-button is-active" data-form-type="lost" aria-pressed="true">잃어버렸어요 <span>LOST</span></button><button type="button" class="form-type-button" data-form-type="found" aria-pressed="false">주인을 찾아요 <span>FOUND</span></button></div>
+        <div class="form-grid">
+          <label class="field"><span>물건 이름 <b>*</b></span><input name="title" required maxlength="50" placeholder="예: 검정색 카드지갑"><small>물건을 알아볼 수 있는 이름을 적어주세요.</small></label>
+          <label class="field"><span>종류 <b>*</b></span><select name="kind" required><option value="">종류를 선택해 주세요</option><option>전자기기</option><option>지갑·카드</option><option>가방·소지품</option><option>의류·잡화</option><option>문구·책</option><option>열쇠</option><option>기타</option></select></label>
+          <label class="field"><span>날짜 <b>*</b></span><input name="date" type="date" required></label>
+          <label class="field"><span>장소 <b>*</b></span><input name="place" required maxlength="50" placeholder="예: 중앙도서관 2층"><small>건물이나 주변 장소를 적어주세요.</small></label>
+          <label class="field field-wide"><span>설명</span><textarea name="description" rows="3" maxlength="240" placeholder="색상, 특징, 발견한 위치 등 도움이 될 내용을 적어주세요."></textarea><small><span id="char-count">0</span>/240</small></label>
+        </div>
+        <div class="privacy-note"><span aria-hidden="true">♡</span><p><strong>개인정보는 받지 않아요.</strong> 연락처와 학번은 입력하지 않아도 됩니다.</p></div>
+        <div class="form-submit-row"><p>등록한 내용은 이 화면을 새로고침하면 초기화돼요.</p><button class="button button-dark" type="submit">소식 등록하기 <span aria-hidden="true">↗</span></button></div>
+      </form>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <footer class="footer"><a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true">ㄷ</span><span><strong>다시, 제자리</strong><small>우리 캠퍼스 분실물 안내</small></span></a><p>서로의 하루를 이어주는 작은 캠퍼스 보드.</p><span>DEMO · LOCAL ONLY</span></footer>
+</body>
+</html>
