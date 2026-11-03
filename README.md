@@ -32,3 +32,5 @@ python3 -m http.server 3000 --directory frontend
 ## 기존 Flask 시제품
 
 `app.py`와 `templates/`는 이전 SQLite 연습용 시제품으로 남아 있습니다. 현재 CAMPUS BOARD의 Supabase 기능을 사용하려면 위의 정적 서버로 `frontend/`를 실행하세요. `python app.py`는 이전 SQLite 화면을 실행하며 Supabase 프론트엔드와 연결되어 있지 않습니다.
+
+기존 Flask 시제품을 WSGI 서버로 실행하는 경우에도 SQLite 테이블이 준비되도록 앱 모듈을 불러올 때 스키마를 초기화합니다. 배포할 때는 `FLASK_SECRET_KEY` 환경 변수를 설정하세요. 정적 CAMPUS BOARD를 배포하려면 `frontend/` 폴더를 정적 사이트로 게시해야 하며, Flask 앱으로 실행하면 현재 Supabase 화면이 나오지 않습니다.

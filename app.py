@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import sqlite3
+import os
 from pathlib import Path
 from datetime import date
 
 app = Flask(__name__)
-app.secret_key = "change-this-secret-key"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "local-development-key-change-before-deploy")
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "lost_found.db"
 
@@ -32,6 +33,12 @@ def init_db():
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+
+# WSGI hosts (for example, Gunicorn) import this module instead of running it
+# as __main__. Initialize the legacy SQLite schema on import so the first
+# request does not fail with "no such table: items".
+init_db()
 
 
 @app.route("/")
@@ -144,5 +151,4 @@ def delete_item(item_id):
 
 
 if __name__ == "__main__":
-    init_db()
-    app.run(debug=True)
+    app.run(debug=False)
