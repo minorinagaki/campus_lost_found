@@ -12,6 +12,10 @@ python3 -m http.server 3000 --directory frontend
 
 브라우저에서 <http://localhost:3000>을 엽니다. 이 주소는 Supabase Auth의 기본 로컬 Site URL과 맞춰 둔 개발 주소입니다. `file://` 주소로 HTML을 직접 열면 Supabase 요청이 브라우저 보안 정책에 막힐 수 있습니다.
 
+### Vercel 배포
+
+저장소 루트의 `vercel.json`이 Framework를 Other로 지정하고 `frontend/`만 정적 배포 결과로 사용합니다. GitHub의 `main`에 변경 사항을 푸시하면 Vercel이 새 배포를 빌드합니다. 배포 프로젝트의 Root Directory는 저장소 루트로 두세요.
+
 ## Supabase 연결
 
 - 설정 파일: `frontend/supabase-config.js`
