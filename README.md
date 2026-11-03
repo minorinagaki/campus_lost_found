@@ -1,48 +1,34 @@
-# 교내 분실물 찾기
+# CAMPUS BOARD
 
-## 1. PyCharm에서 실행하기
+이화여대 캠퍼스 분실물·습득물 공유 웹사이트입니다. `frontend/`의 기존 화면 디자인을 유지하면서 Supabase Auth, Postgres, Storage를 사용합니다.
 
-1. Python 3.10 이상을 설치합니다.
-2. PyCharm에서 이 폴더를 프로젝트로 엽니다.
-3. PyCharm 터미널에서 가상 환경을 만듭니다.
+## CAMPUS BOARD 실행
 
-```bash
-python -m venv .venv
-```
-
-macOS에서:
+프로젝트 루트에서 정적 서버를 실행합니다.
 
 ```bash
-source .venv/bin/activate
+python3 -m http.server 3000 --directory frontend
 ```
 
-Windows에서:
+브라우저에서 <http://localhost:3000>을 엽니다. 이 주소는 Supabase Auth의 기본 로컬 Site URL과 맞춰 둔 개발 주소입니다. `file://` 주소로 HTML을 직접 열면 Supabase 요청이 브라우저 보안 정책에 막힐 수 있습니다.
 
-```powershell
-.venv\Scripts\activate
-```
+## Supabase 연결
 
-4. Flask를 설치합니다.
+- 설정 파일: `frontend/supabase-config.js`
+- 이 파일에는 브라우저 공개용 Supabase URL과 `sb_publishable_` 키만 있습니다. 공개 키는 프론트엔드에 포함해도 되며, 접근 제어는 RLS 정책이 담당합니다.
+- `service_role`/secret 키는 프론트엔드나 Git에 넣지 않습니다.
+- 원격 프로젝트 `minorinagaki's Project`에는 `supabase/schema.sql`과 `supabase/backend_features.sql`을 적용했습니다.
+- 이미지 버킷 `campus-item-images`는 Public, 이미지/JPEG·PNG·WEBP, 파일당 최대 5 MiB로 설정했습니다. 업로드와 수정·삭제는 로그인 사용자 본인의 폴더에 제한됩니다.
+- 프로젝트의 Site URL이 기본값과 다르면 Supabase Dashboard의 **Authentication → URL Configuration**에서 `http://localhost:3000`을 허용 Redirect URL로 추가해야 합니다. 배포 시 실제 사이트 주소도 추가합니다.
 
-```bash
-pip install -r requirements.txt
-```
+## 기능
 
-5. `app.py`를 실행합니다.
-6. 터미널에 표시되는 주소(보통 `http://127.0.0.1:5000`)를 브라우저에서 엽니다.
+- 이메일 회원가입, 로그인, 로그아웃 및 Auth 프로필 연결
+- 분실·습득 게시물의 Supabase 저장, 상세 보기 및 공유
+- 로그인 사용자 사진 업로드, 본인 게시물 수정·삭제, 진행 중/반환 완료 상태 변경
+- 제목·설명·종류·장소 검색과 게시물 필터
+- 게시물 공개 조회, 작성자 본인 변경 권한을 RLS로 제한
 
-## 2. 포함된 기능
+## 기존 Flask 시제품
 
-- 분실물 등록 및 목록 보기
-- 키워드 검색
-- 종류·장소·상태별 필터
-- 게시물 상태 변경 및 삭제
-- SQLite 데이터베이스에 정보 저장
-
-## 3. 안내
-
-이 코드는 로컬 실습용 시제품입니다. 로그인, 사용자 인증, 관리자 권한, 사진 업로드, 신고 기능은 아직 구현하지 않았습니다.
-
-공개하기 전에 인증과 접근 제어, 입력값 검증, 개인정보 보호, 백업 기능을 추가하세요. 공개 환경에서는 Flask 디버그 모드를 꺼야 합니다.
-
-별도의 프론트엔드 데모는 [화면 열기](frontend/index.html)에서 확인할 수 있습니다. 이 데모는 브라우저 메모리에서만 동작하며, 새로고침하면 예시 게시물로 돌아갑니다.
+`app.py`와 `templates/`는 이전 SQLite 연습용 시제품으로 남아 있습니다. 현재 CAMPUS BOARD의 Supabase 기능을 사용하려면 위의 정적 서버로 `frontend/`를 실행하세요. `python app.py`는 이전 SQLite 화면을 실행하며 Supabase 프론트엔드와 연결되어 있지 않습니다.

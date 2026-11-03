@@ -4,29 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f4ec">
-  <meta name="description" content="캠퍼스에서 잃어버린 물건을 찾고, 발견한 물건을 알리는 교내 분실물 안내 데모입니다.">
-  <title>다시, 제자리 — 교내 분실물 찾기</title>
+  <meta name="description" content="이화여대 캠퍼스에서 분실물과 습득물을 공유하고 주인을 찾아주는 CAMPUS BOARD입니다.">
+  <title>잃어버린 물건, 함께 찾아요 — 이화여대 분실물 찾기</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="supabase-config.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
   <header class="topbar">
-    <a class="brand" href="#top" aria-label="다시, 제자리 홈">
-      <span class="brand-mark" aria-hidden="true">ㄷ</span>
-      <span><strong>다시, 제자리</strong><small>우리 캠퍼스 분실물 안내</small></span>
+    <a class="brand" href="#top" aria-label="다시, 너에게 홈">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span><strong>다시, 너에게</strong><small>이화여대 캠퍼스 분실물 안내</small></span>
     </a>
     <nav class="top-nav" aria-label="주요 메뉴">
       <a href="#find">물건 찾기</a><a href="#share">분실·습득 알리기</a>
     </nav>
-    <span class="campus-tag"><span aria-hidden="true">✳</span> 우리 캠퍼스</span>
+    <div class="account-actions" id="account-actions">
+      <button class="account-button account-primary" id="open-auth" type="button">로그인</button>
+      <button class="account-button account-primary" id="account-menu-button" type="button" aria-controls="account-menu" aria-expanded="false" hidden>내 계정</button>
+      <div class="account-menu" id="account-menu" hidden>
+        <button id="open-my-posts" type="button">내 게시물</button>
+        <button id="sign-out" type="button">로그아웃</button>
+      </div>
+    </div>
+    <span class="campus-tag"><span aria-hidden="true">✳</span> 이화여대 캠퍼스</span>
   </header>
 
   <main id="main">
     <section class="hero" id="top" aria-labelledby="hero-title">
       <div class="hero-copy">
         <p class="eyebrow"><span class="eyebrow-dot"></span> 잃어버린 마음까지 돌아오도록</p>
-        <h1 id="hero-title">어떻게 찾을까,<br><span>어떻게 알릴까?</span></h1>
+        <h1 id="hero-title">잃어버린 물건,<br><span>함께 찾아요</span></h1>
         <p class="hero-lede">잠깐 놓친 물건도, 누군가의 작은 배려도<br class="desktop-break"> 캠퍼스 안에서 다시 만날 수 있게.</p>
         <div class="hero-actions">
           <a class="button button-dark" href="#find">물건 찾아보기 <span aria-hidden="true">↘</span></a>
@@ -50,7 +60,7 @@
 
     <section class="find-section section-wrap" id="find" aria-labelledby="find-title">
       <div class="section-heading">
-        <div><p class="eyebrow"><span class="eyebrow-dot"></span> CAMPUS BOARD</p><h2 id="find-title">혹시 여기 있을까요<span class="heading-period">.</span></h2><p class="section-intro">키워드나 장소로 찾아보세요. 작은 단서가 큰 도움이 돼요.</p></div>
+        <div><p class="eyebrow"><span class="eyebrow-dot"></span> CAMPUS BOARD</p><h2 id="find-title">물건 이름을 검색해 보세요<span class="heading-period">.</span></h2><p class="section-intro">키워드나 장소로 찾아보세요. 작은 단서가 큰 도움이 돼요.</p></div>
         <div class="board-count"><strong id="total-count">0</strong><span>개의 소식</span></div>
       </div>
       <div class="filter-panel" role="search" aria-label="분실물 게시물 검색 및 필터">
@@ -72,7 +82,7 @@
     <section class="share-section" id="share" aria-labelledby="share-title">
       <div class="share-inner">
         <div class="share-symbol" aria-hidden="true"><span>＋</span><i>✳</i></div>
-        <div class="share-copy"><p class="eyebrow"><span class="eyebrow-dot"></span> PASS IT ON</p><h2 id="share-title">찾는 사람이 있다면,<br><span>당신의 소식이 닿도록.</span></h2><p>잃어버린 물건도, 주인을 기다리는 물건도<br>간단한 정보로 함께 나눠요.</p></div>
+        <div class="share-copy"><p class="eyebrow"><span class="eyebrow-dot"></span> PASS IT ON</p><h2 id="share-title">잃어버린 물건이<br><span>주인을 찾을 수 있도록.</span></h2><p>잃어버린 물건도, 주인을 기다리는 물건도<br>간단한 정보로 함께 나눠요.</p></div>
         <div class="share-actions"><button class="button button-dark" type="button" data-open-form="lost">물건을 잃어버렸어요 <span aria-hidden="true">↗</span></button><button class="button button-outline" type="button" data-open-form="found">물건을 주웠어요 <span aria-hidden="true">↗</span></button><small>연락처와 학번은 입력하지 않아요.</small></div>
       </div>
     </section>
@@ -87,13 +97,32 @@
           <label class="field"><span>날짜 <b>*</b></span><input name="date" type="date" required></label>
           <label class="field"><span>장소 <b>*</b></span><input name="place" required maxlength="50" placeholder="예: 중앙도서관 2층"><small>건물이나 주변 장소를 적어주세요.</small></label>
           <label class="field field-wide"><span>설명</span><textarea name="description" rows="3" maxlength="240" placeholder="색상, 특징, 발견한 위치 등 도움이 될 내용을 적어주세요."></textarea><small><span id="char-count">0</span>/240</small></label>
+          <label class="field field-wide"><span>사진 <small>(선택)</small></span><input name="image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG, WEBP · 최대 5MB</small></label>
         </div>
         <div class="privacy-note"><span aria-hidden="true">♡</span><p><strong>개인정보는 받지 않아요.</strong> 연락처와 학번은 입력하지 않아도 됩니다.</p></div>
-        <div class="form-submit-row"><p>등록한 내용은 이 화면을 새로고침하면 초기화돼요.</p><button class="button button-dark" type="submit">소식 등록하기 <span aria-hidden="true">↗</span></button></div>
+        <div class="form-submit-row"><p id="form-save-note">등록한 내용은 Supabase에 저장됩니다.</p><button class="button button-dark" id="submit-post" type="submit">소식 등록하기 <span aria-hidden="true">↗</span></button></div>
       </form>
     </section>
   </main>
+  <dialog class="site-dialog" id="auth-dialog" aria-labelledby="auth-title">
+    <div class="dialog-panel">
+      <div class="dialog-heading"><div><p class="eyebrow"><span class="eyebrow-dot"></span> CAMPUS ACCOUNT</p><h2 id="auth-title">로그인<span class="heading-period">.</span></h2></div><button class="close-form" type="button" data-close-dialog aria-label="닫기">×</button></div>
+      <form id="auth-form" novalidate>
+        <label class="field" id="display-name-field" hidden><span>이름 <b>*</b></span><input name="display_name" maxlength="80" autocomplete="name" placeholder="화면에 표시할 이름"></label>
+        <label class="field"><span>이메일 <b>*</b></span><input name="email" type="email" required autocomplete="email" placeholder="name@example.com"></label>
+        <label class="field"><span>비밀번호 <b>*</b></span><input name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="8자 이상 입력해 주세요"></label>
+        <p class="dialog-note" id="auth-note">게시물을 등록하고 관리하려면 로그인해 주세요.</p>
+        <div class="dialog-actions"><button class="button button-dark" id="auth-submit" type="submit">로그인</button><button class="text-button" id="toggle-auth-mode" type="button">처음 오셨나요? 회원가입</button></div>
+      </form>
+    </div>
+  </dialog>
+  <dialog class="site-dialog site-dialog-wide" id="detail-dialog" aria-labelledby="detail-title">
+    <div class="dialog-panel"><div class="dialog-heading"><div><p class="eyebrow"><span class="eyebrow-dot"></span> ITEM DETAILS</p><h2 id="detail-title">게시물 상세</h2></div><button class="close-form" type="button" data-close-dialog aria-label="닫기">×</button></div><div id="detail-content"></div></div>
+  </dialog>
+  <dialog class="site-dialog site-dialog-wide" id="my-posts-dialog" aria-labelledby="my-posts-title">
+    <div class="dialog-panel"><div class="dialog-heading"><div><p class="eyebrow"><span class="eyebrow-dot"></span> MY CAMPUS NOTES</p><h2 id="my-posts-title">내 게시물<span class="heading-period">.</span></h2></div><button class="close-form" type="button" data-close-dialog aria-label="닫기">×</button></div><p class="section-intro">내가 등록한 소식을 확인하고 수정할 수 있어요.</p><div class="my-post-list" id="my-post-list" aria-live="polite"></div></div>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <footer class="footer"><a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true">ㄷ</span><span><strong>다시, 제자리</strong><small>우리 캠퍼스 분실물 안내</small></span></a><p>서로의 하루를 이어주는 작은 캠퍼스 보드.</p><span>DEMO · LOCAL ONLY</span></footer>
+  <footer class="footer"><a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span><strong>다시, 너에게</strong><small>이화여대 캠퍼스 분실물 안내</small></span></a><p>서로의 하루를 이어주는 작은 캠퍼스 보드.</p><span id="connection-status">CAMPUS BOARD</span></footer>
 </body>
 </html>

@@ -10,3 +10,53 @@
 @media(max-width:720px){.topbar{height:67px;padding:0 20px}.top-nav{gap:15px;font-size:10px}.campus-tag{display:none}.brand-mark{width:32px;height:32px}.hero{min-height:auto;padding:67px 24px 54px;display:block}.hero-copy{padding:0 0 15px}.hero h1{font-size:clamp(43px,10vw,65px)}.hero-lede{font-size:12px;margin:17px 0 22px}.hero-note{position:static;margin-top:19px}.hero-art{height:310px;transform:scale(.83);transform-origin:top center;margin:12px auto -40px}.sun{right:calc(50% - 205px)}.art-board{width:min(390px,90%)}.label-top{right:calc(50% - 185px)}.hero-bottom{left:24px;right:24px;bottom:15px}.section-wrap{padding-left:24px;padding-right:24px}.find-section{padding-top:55px;padding-bottom:62px}.section-heading h2,.form-heading h2{font-size:29px}.filter-panel{grid-template-columns:1fr 1fr;gap:7px;padding:8px;margin-top:23px}.search-box{grid-column:1/-1}.filter-select{min-width:0}.type-filter{grid-column:1/-1;grid-row:3;justify-content:flex-start}.type-filter label span{padding:8px 12px}.reset-button{grid-column:2;grid-row:3;justify-self:end}.results-line{margin-top:16px}.results-decoration{display:none}.post-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.post-card{padding:14px 13px;min-height:190px}.card-title{font-size:13px;margin-top:14px}.card-description{font-size:9px}.kind-badge,.type-badge{font-size:7px;padding:4px 5px}.card-date{font-size:7px}.share-inner{padding:42px 24px;grid-template-columns:76px 1fr;gap:12px 19px}.share-symbol{width:67px;height:67px}.share-symbol>span{font-size:47px}.share-copy h2{font-size:23px}.share-copy .eyebrow{font-size:8px}.share-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.share-actions .button{font-size:9px;gap:6px;padding:12px}.share-actions small{grid-column:1/-1}.form-section{padding-top:54px;padding-bottom:60px}.form-section form{padding:16px;margin-top:20px}.form-grid{gap:15px 10px}.field input,.field select,.field textarea{padding:11px 9px}.footer{padding:20px 24px;flex-wrap:wrap;gap:14px}.footer>p{order:3;width:100%;margin:0}.footer>span{font-size:7px}}
 @media(max-width:420px){.top-nav{gap:11px;font-size:9px}.brand{gap:7px}.brand strong{font-size:12px}.brand small{font-size:8px}.hero{padding-left:20px;padding-right:20px}.hero h1{font-size:43px}.hero-actions{gap:7px}.button{font-size:10px;padding:13px 12px;gap:11px}.hero-art{margin-top:5px;transform:scale(.76);margin-bottom:-63px}.section-wrap{padding-left:18px;padding-right:18px}.section-heading h2,.form-heading h2{font-size:26px}.board-count strong{font-size:26px}.post-grid{grid-template-columns:1fr}.post-card{min-height:166px}.card-title{font-size:15px}.card-description{font-size:10px}.card-date{font-size:8px}.share-inner{padding-left:20px;padding-right:20px}.share-copy h2{font-size:20px}.share-actions .button{font-size:8px;padding:11px 8px}.form-grid{grid-template-columns:1fr}.field-wide{grid-column:auto}.form-submit-row{align-items:flex-start;gap:12px;flex-direction:column-reverse}.form-submit-row .button{width:100%}.footer{padding-left:20px;padding-right:20px}.footer-brand .brand-mark{width:27px;height:27px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* 계정·상세 기능은 기존 CAMPUS BOARD 색상과 입력 스타일에 맞춰 추가합니다. */
+.account-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;position:relative}
+.field[hidden]{display:none}
+.account-button{border:1px solid #cbd3c7;border-radius:30px;padding:8px 11px;background:transparent;color:var(--green);font-size:9px;cursor:pointer;white-space:nowrap}
+.account-button:hover{background:#e9eddf}
+.account-button.account-primary{background:var(--green-dark);border-color:var(--green-dark);color:#fffefa}
+.account-button.account-primary:hover{background:#3d5e49}
+.account-button[hidden]{display:none}
+.account-menu{position:absolute;z-index:12;right:0;top:calc(100% + 8px);min-width:130px;padding:5px;background:var(--white);border:1px solid #dcded2;border-radius:3px;box-shadow:0 8px 24px #26352c1a}
+.account-menu[hidden]{display:none}
+.account-menu button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:10px 11px;color:var(--ink);font-size:10px;cursor:pointer}
+.account-menu button:hover{background:#eceee4;color:var(--green)}
+.card-title-button{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;color:inherit;cursor:pointer}
+.card-title-button:hover{color:var(--green)}
+.card-image{display:block;width:100%;max-height:190px;object-fit:cover;margin-top:13px;border:1px solid #e6e5db;border-radius:2px}
+.type-badge.returned{background:#e8e5dc;color:#6e7168}
+.site-dialog{width:min(520px,calc(100vw - 28px));max-width:none;max-height:calc(100vh - 28px);padding:0;border:1px solid #dcded2;border-radius:4px;background:var(--paper);color:var(--ink);box-shadow:0 20px 70px #1d302244;overflow:auto}
+.site-dialog::backdrop{background:rgba(29,43,34,.48);backdrop-filter:blur(2px)}
+.site-dialog-wide{width:min(760px,calc(100vw - 28px))}
+.dialog-panel{padding:26px;background:var(--paper)}
+.dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:21px}
+.dialog-heading .eyebrow{margin-bottom:10px}
+.dialog-heading h2{margin:0;font-size:27px;letter-spacing:-.06em}
+#auth-form{display:grid;gap:14px}
+.dialog-note{margin:0;color:#788176;font-size:10px;line-height:1.7}
+.dialog-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-top:3px}
+.dialog-actions .button{min-height:42px}
+.text-button{align-self:center;border:0;background:transparent;color:var(--green);font-size:10px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:7px}
+.field input[type=file]{padding:9px;background:#fffefa;font-size:9px}
+.detail-image{display:block;width:100%;max-height:380px;object-fit:contain;background:#eeefe7;border:1px solid #e0e3d8;margin-bottom:18px}
+.detail-badges{display:flex;gap:6px;align-items:center;margin-bottom:12px}
+.detail-title{font-size:23px;letter-spacing:-.04em;margin:0 0 12px}
+.detail-description{font-size:12px;line-height:1.9;color:#68756a;white-space:pre-wrap;margin:17px 0}
+.detail-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px;background:#eceee4;border:1px solid #e1e4da;font-size:10px}
+.detail-meta span{color:#8a9288;margin-right:6px}
+.detail-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.my-post-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:20px}
+.my-post-card{min-width:0;background:var(--white);border:1px solid #e6e5db;padding:15px}
+.my-post-card .card-title{margin-top:12px}
+.my-post-card .card-description{margin-top:5px}
+.my-post-controls{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid #eeeee7}
+.my-post-controls select{min-width:0;flex:1;border:1px solid #dfe3d9;background:#fffefa;padding:7px;font-size:9px}
+.my-post-controls button{border:1px solid #dfe3d9;background:transparent;padding:7px 9px;font-size:9px;cursor:pointer}
+.my-post-controls button:hover{border-color:#879684;color:var(--green)}
+.my-post-empty{grid-column:1/-1;text-align:center;padding:35px 18px;background:#eeefe7;border:1px dashed #d2d8ca;color:#788176;font-size:11px}
+.button:disabled,.account-button:disabled{opacity:.55;cursor:wait;transform:none}
+@media(max-width:1000px){.account-actions{gap:4px}.account-button{padding:7px 9px}}
+@media(max-width:720px){.topbar{gap:12px}.account-actions{gap:4px}.account-button{font-size:8px;padding:7px 8px}.site-dialog{width:min(520px,calc(100vw - 20px));max-height:calc(100vh - 20px)}.site-dialog-wide{width:min(760px,calc(100vw - 20px))}.dialog-panel{padding:20px}.my-post-list{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){.topbar{gap:7px;padding-left:12px;padding-right:12px}.top-nav{gap:7px;font-size:8px}.brand{gap:6px}.brand small{display:none}.brand strong{font-size:11px}.brand-mark{width:27px;height:27px}.account-actions{gap:3px}.account-button{font-size:8px;padding:6px 7px}.campus-tag{display:none}.dialog-panel{padding:16px}.detail-meta{grid-template-columns:1fr}.my-post-list{grid-template-columns:1fr}}
