@@ -1,6 +1,6 @@
 # 공통 작업 상태와 규칙
 
-마지막 업데이트: 2026-11-03 16:39 KST
+마지막 업데이트: 2026-11-03 16:41 KST
 
 ## 문서 분담
 
@@ -64,4 +64,5 @@
 - 2026-11-03 16:16 KST: `node --check`(앱과 공개 설정), `git diff --check`, HTML 파싱 및 45개 ID 중복 검사를 통과했습니다. 브라우저 공개 키로 Supabase `items` GET과 Auth 설정 GET이 HTTP 200이며 이메일 가입 허용을 확인했습니다. localhost:3000에서 HTML, 설정 파일, 앱 스크립트가 모두 HTTP 200으로 제공됐습니다. Orca의 Accessibility 권한 오류로 시각 브라우저 조작은 중단했고, 테스트 계정/이메일이 없어 가입·로그인·사진 업로드 전체 사용자 시나리오는 아직 미검증입니다. 배포 도메인은 Supabase Auth Redirect URLs에 추가해야 합니다.
 - 2026-11-03 16:18 KST: 추가로 Supabase MCP에 임시 Auth 테스트 계정 생성·삭제 기능이 없는 것을 확인했습니다. 테스트 계정이나 인증 이메일을 만들지 않았습니다. 공개 API 연결과 이메일 가입 허용 상태는 확인했지만 실제 사용자 인증 및 업로드 시나리오는 미검증 상태입니다.
 - 2026-11-03 16:35 KST: 사용자가 Internal Server Error 해결을 요청했습니다. 로컬 3000 포트에는 서버가 응답하지 않았고, 프로젝트에는 Supabase 정적 프론트엔드와 별도의 구형 Flask/SQLite 앱이 함께 있음을 확인했습니다. WSGI 호스트가 Flask 모듈을 가져올 때 `init_db()`가 실행되지 않아 `items` 테이블 부재로 500이 날 수 있어 모듈 로드 시 스키마를 초기화하도록 수정했습니다. Flask 배포 안내에 `FLASK_SECRET_KEY` 설정과 정적 CAMPUS BOARD 배포 경로를 구분해 기록했습니다. 사용자가 본 오류의 URL/호스팅 제공자는 아직 확인되지 않아 실제 호스팅 환경의 오류 로그는 확인하지 못했습니다.
-- 2026-11-03 16:39 KST: 사용자가 Vercel 배포 URL을 제공했습니다. 배포 주소는 인증 보호 때문에 익명 요청에서 HTTP 302로 Vercel SSO로 이동해 페이지 본문과 로그를 확인할 수 없었습니다. GitHub Pages는 활성화되어 있지 않고 저장소 루트에도 Vercel 설정이 없었습니다. Vercel이 Flask/SQLite 앱 대신 현재 Supabase 기반 CAMPUS BOARD의 정적 `frontend/`를 내보내도록 `vercel.json`을 추가하고 README에 프로젝트 Root Directory 안내를 기록합니다. Git 푸시 후 Vercel 자동 빌드 상태와 보호된 배포 페이지의 브라우저 확인은 아직 남습니다.
+- 2026-11-03 16:39 KST: 사용자가 Vercel 배포 URL을 제공했습니다. 해당 개별 배포 주소는 인증 보호로 익명 요청에서 Vercel SSO로 이동했습니다. GitHub Pages는 활성화되어 있지 않고 저장소 루트에 Vercel 설정도 없었습니다. Vercel이 Flask/SQLite 앱 대신 Supabase 기반 CAMPUS BOARD의 정적 `frontend/`를 내보내도록 `vercel.json`을 추가하고 README에 루트 디렉터리 안내를 기록했습니다.
+- 2026-11-03 16:41 KST: 커밋 `815a2ff`의 Vercel 빌드가 성공했습니다. 기본 프로젝트 주소 `https://campus-lost-found-bsyn.vercel.app/`에서 HTML, `app.js`, `style.css`, `supabase-config.js`가 모두 HTTP 200으로 응답하는 것을 확인했습니다. 개별 미리보기 주소는 Vercel 로그인 보호가 걸려 있으므로 기본 프로젝트 주소를 사용합니다.
