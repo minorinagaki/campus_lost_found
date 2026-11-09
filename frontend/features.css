@@ -1,0 +1,14 @@
+.claim-box{margin-top:22px;padding:18px;background:#f5f5ee;border:1px solid #e0e3d8}
+.claim-box h4{margin:0 0 8px;font-size:15px}
+.claim-box>p,#claim-result{color:#788176;font-size:12px;line-height:1.7}
+.claim-box form{display:flex;align-items:flex-end;gap:12px;margin-top:14px}
+.claim-box .field{flex:1;margin:0}
+.claim-box .button{white-space:nowrap}
+#claim-result{margin-top:12px}
+#claim-result .button{display:inline-flex;margin-top:8px;text-decoration:none}
+#gps-note{display:block;margin-top:7px}
+.field .voice-input{align-self:flex-start;padding:2px 0;text-decoration:none}
+.field .voice-input:disabled{opacity:.6;cursor:wait}
+.voice-note{margin:16px 0 0;color:#92998f;font-size:9px;line-height:1.6}
+.card-image,.detail-image{filter:blur(10px)}
+@media(max-width:560px){.claim-box{padding:14px}.claim-box form{align-items:stretch;flex-direction:column}.claim-box .button{width:100%}}

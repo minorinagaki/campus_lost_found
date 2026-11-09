@@ -4,3 +4,4 @@
 __pycache__/
 *.py[cod]
 lost_found.db
+supabase/.temp/

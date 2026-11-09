@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#f7f4ec">
   <meta name="description" content="이화여대 캠퍼스에서 분실물과 습득물을 공유하고 주인을 찾아주는 CAMPUS BOARD입니다.">
   <title>잃어버린 물건, 함께 찾아요 — 이화여대 분실물 찾기</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=close-icon-center-2">
+  <link rel="stylesheet" href="features.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="supabase-config.js" defer></script>
   <script src="app.js" defer></script>
@@ -37,7 +38,7 @@
       <div class="hero-copy">
         <p class="eyebrow"><span class="eyebrow-dot"></span> 잃어버린 마음까지 돌아오도록</p>
         <h1 id="hero-title">잃어버린 물건,<br><span>함께 찾아요</span></h1>
-        <p class="hero-lede">잠깐 놓친 물건도, 누군가의 작은 배려도<br class="desktop-break"> 캠퍼스 안에서 다시 만날 수 있게.</p>
+        <p class="hero-lede">누군가 잃어버린 물건, 당신의 작은 배려로<br class="desktop-break"> 캠퍼스 안에서 다시 만날 수 있게!</p>
         <div class="hero-actions">
           <a class="button button-dark" href="#find">분실물 찾기 <span aria-hidden="true">↘</span></a>
           <button class="button button-light" type="button" data-open-form="lost">습득물 등록하기 <span aria-hidden="true">＋</span></button>
@@ -92,14 +93,17 @@
       <form id="report-entry" novalidate>
         <div class="form-type" role="group" aria-label="게시물 유형"><button type="button" class="form-type-button is-active" data-form-type="lost" aria-pressed="true">잃어버렸어요 <span>LOST</span></button><button type="button" class="form-type-button" data-form-type="found" aria-pressed="false">주인을 찾아요 <span>FOUND</span></button></div>
         <div class="form-grid">
-          <label class="field"><span>물건 이름 <b>*</b></span><input name="title" required maxlength="50" placeholder="예: 검정색 카드지갑"><small>물건을 알아볼 수 있는 이름을 적어주세요.</small></label>
+          <label class="field"><span>물건 이름 <b>*</b></span><input name="title" required maxlength="50" placeholder="예: 검정색 카드지갑"><button class="text-button voice-input" type="button" data-voice-target="title">🎙 음성 입력</button><small>물건을 알아볼 수 있는 이름을 적어주세요.</small></label>
           <label class="field"><span>종류 <b>*</b></span><select name="kind" required><option value="">종류를 선택해 주세요</option><option>전자기기</option><option>지갑·카드</option><option>가방·소지품</option><option>의류·잡화</option><option>문구·책</option><option>열쇠</option><option>기타</option></select></label>
           <label class="field"><span>날짜 <b>*</b></span><input name="date" type="date" required></label>
-          <label class="field"><span>장소 <b>*</b></span><input name="place" required maxlength="50" placeholder="예: 중앙도서관 2층"><small>건물이나 주변 장소를 적어주세요.</small></label>
-          <label class="field field-wide"><span>설명</span><textarea name="description" rows="3" maxlength="240" placeholder="색상, 특징, 발견한 위치 등 도움이 될 내용을 적어주세요."></textarea><small><span id="char-count">0</span>/240</small></label>
-          <label class="field field-wide"><span>사진 <small>(선택)</small></span><input name="image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG, WEBP · 최대 5MB</small></label>
+          <label class="field"><span>장소 <b>*</b></span><input name="place" required maxlength="50" placeholder="예: 중앙도서관 2층"><button class="text-button voice-input" type="button" data-voice-target="place">🎙 음성 입력</button><button class="text-button" id="use-current-location" type="button">GPS로 건물 찾기</button><small id="gps-note">위치 조회를 위해 좌표를 Photon/OpenStreetMap에 보내며, 게시글에는 건물명만 표시합니다. <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">지도 출처</a></small><small id="gps-status">GPS는 선택사항이며 장소를 직접 입력할 수도 있어요.</small></label>
+          <label class="field field-wide"><span>설명</span><textarea name="description" rows="3" maxlength="240" placeholder="색상, 특징, 발견한 위치 등 도움이 될 내용을 적어주세요."></textarea><button class="text-button voice-input" type="button" data-voice-target="description">🎙 음성으로 설명하기</button><small><span id="char-count">0</span>/240</small></label>
+          <label class="field"><span>확인 질문 <b>*</b></span><input name="verification_question" required maxlength="160" placeholder="예: 지갑 안에 들어 있던 카드는 무슨 색인가요?"><button class="text-button voice-input" type="button" data-voice-target="verification_question">🎙 음성 입력</button><small>게시글에 공개하지 않은 특징을 질문으로 정해 주세요.</small></label>
+          <label class="field"><span>정답 <b>*</b></span><input name="verification_answer" required maxlength="120" autocomplete="off" placeholder="정답은 게시글에 공개되지 않아요."><button class="text-button voice-input" type="button" data-voice-target="verification_answer">🎙 음성 입력</button><small>정답은 암호화해 저장하고, 맞힌 사람에게만 이메일을 보여줍니다.</small></label>
+          <label class="field field-wide"><span>사진 <small>(선택)</small></span><input name="image" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"><small>사진은 블러 처리 후 업로드됩니다. JPG, PNG, WEBP · 최대 5MB</small></label>
         </div>
-        <div class="privacy-note"><span aria-hidden="true">♡</span><p><strong>개인정보는 받지 않아요.</strong> 연락처와 학번은 입력하지 않아도 됩니다.</p></div>
+        <p class="voice-note">음성 입력은 브라우저 음성 인식 기능을 사용하며, 지원하지 않는 브라우저에서는 직접 입력해 주세요.</p>
+        <div class="privacy-note"><span aria-hidden="true">♡</span><p><strong>연락처와 학번은 공개하지 않아요.</strong> 정답을 맞힌 경우에만 등록자 이메일을 확인할 수 있어요.</p></div>
         <div class="form-submit-row"><p id="form-save-note">등록한 내용은 Supabase에 저장됩니다.</p><button class="button button-dark" id="submit-post" type="submit">소식 등록하기 <span aria-hidden="true">↗</span></button></div>
       </form>
     </section>
@@ -109,7 +113,7 @@
       <div class="dialog-heading"><div><p class="eyebrow"><span class="eyebrow-dot"></span> CAMPUS ACCOUNT</p><h2 id="auth-title">로그인<span class="heading-period">.</span></h2></div><button class="close-form" type="button" data-close-dialog aria-label="닫기">×</button></div>
       <form id="auth-form" novalidate>
         <label class="field" id="display-name-field" hidden><span>이름 <b>*</b></span><input name="display_name" maxlength="80" autocomplete="name" placeholder="화면에 표시할 이름"></label>
-        <label class="field"><span>이메일 <b>*</b></span><input name="email" type="email" required autocomplete="email" placeholder="name@example.com"></label>
+        <label class="field"><span>이메일 <b>*</b></span><input name="email" type="email" required autocomplete="email" placeholder="name@ewha.ac.kr"></label>
         <label class="field"><span>비밀번호 <b>*</b></span><input name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="8자 이상 입력해 주세요"></label>
         <p class="dialog-note" id="auth-note">게시물을 등록하고 관리하려면 로그인해 주세요.</p>
         <div class="dialog-actions"><button class="button button-dark" id="auth-submit" type="submit">로그인</button><button class="text-button" id="toggle-auth-mode" type="button">처음 오셨나요? 회원가입</button></div>

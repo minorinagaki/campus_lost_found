@@ -4,6 +4,7 @@
   const BUCKET = 'campus-item-images';
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
   const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  const EWHA_EMAIL_DOMAINS = new Set(['ewha.ac.kr', 'ewhain.net']);
   const CATEGORIES = ['전자기기', '지갑·카드', '가방·소지품', '의류·잡화', '문구·책', '열쇠', '기타'];
   const config = window.CAMPUS_SUPABASE;
   const client = window.supabase?.createClient && config?.url && config?.key
@@ -20,6 +21,9 @@
   let accountMenuOpen = false;
   let backendAvailable = false;
   let toastTimer;
+  let activeRecognition = null;
+  let activeRecognitionButton = null;
+  let recognitionHadResult = false;
 
   const list = document.querySelector('#post-list');
   const keyword = document.querySelector('#keyword');
@@ -53,11 +57,145 @@
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }
 
+  function isEwhaEmail(value) {
+    const email = String(value || '').trim().toLowerCase();
+    const at = email.lastIndexOf('@');
+    return at > 0 && EWHA_EMAIL_DOMAINS.has(email.slice(at + 1));
+  }
+
+  async function makeBlurredImage(file) {
+    if (!window.createImageBitmap) throw new Error('사진 블러 처리 기능을 지원하는 최신 브라우저가 필요해요.');
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    context.filter = `blur(${Math.max(12, Math.min(canvas.width, canvas.height) * 0.035)}px)`;
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise((resolve, reject) => canvas.toBlob(
+      (result) => result ? resolve(result) : reject(new Error('사진 블러 처리에 실패했어요.')),
+      'image/webp', 0.82
+    ));
+    return new File([blob], 'campus-item-blurred.webp', { type: 'image/webp' });
+  }
+
+  function getCurrentLocation() {
+    if (!navigator.geolocation) return showToast('이 브라우저에서는 GPS를 사용할 수 없어요.');
+    const button = document.querySelector('#use-current-location');
+    const note = document.querySelector('#gps-status');
+    button.disabled = true;
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      note.textContent = '주변 건물명을 찾고 있어요. 정확한 GPS 좌표는 게시글에 공개되지 않습니다.';
+      try {
+        const cacheKey = `campus-place-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
+        let placeName = sessionStorage.getItem(cacheKey);
+        if (!placeName) {
+          const url = new URL('https://photon.komoot.io/reverse');
+          url.searchParams.set('lat', coords.latitude);
+          url.searchParams.set('lon', coords.longitude);
+          url.searchParams.set('limit', '1');
+          const response = await fetch(url, { headers: { Accept: 'application/json' } });
+          if (!response.ok) throw new Error('위치 검색 서비스에 연결할 수 없어요.');
+          const result = await response.json();
+          const properties = result.features?.[0]?.properties;
+          placeName = properties?.name || properties?.building || properties?.street || '';
+          if (placeName) sessionStorage.setItem(cacheKey, placeName);
+        }
+        if (placeName) {
+          form.elements.place.value = placeName.slice(0, 50);
+          note.textContent = `주변 장소를 찾았어요: ${placeName}. 건물명과 층을 확인해 주세요.`;
+          showToast('GPS로 주변 장소를 찾았어요. 건물명과 층을 확인해 주세요.');
+        } else {
+          note.textContent = '주변 건물을 찾지 못했어요. 장소를 직접 입력해 주세요.';
+          showToast('장소에 건물명을 직접 적어 주세요.');
+        }
+      } catch (_) {
+        note.textContent = '건물명 검색에 실패했어요. 장소를 직접 입력해 주세요.';
+        showToast('건물명은 직접 입력해 주세요.');
+      } finally {
+        button.disabled = false;
+      }
+    }, (error) => {
+      button.disabled = false;
+      note.textContent = '위치 권한을 허용하거나 장소를 직접 입력해 주세요.';
+      showToast(error.code === error.PERMISSION_DENIED
+        ? '브라우저에서 위치 권한을 허용해 주세요.' : '현재 위치를 확인하지 못했어요.');
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  }
+
   function showToast(message) {
     toast.textContent = message;
     toast.classList.add('is-visible');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 3600);
+  }
+
+  function getAuthRedirectUrl() {
+    if (window.location.protocol === 'file:') return 'http://localhost:3000/';
+    return `${window.location.origin}${window.location.pathname}`;
+  }
+
+  function startVoiceInput(button) {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      showToast('이 브라우저는 음성 입력을 지원하지 않아요. 키보드로 입력해 주세요.');
+      return;
+    }
+    if (activeRecognition) {
+      if (activeRecognitionButton === button) activeRecognition.stop();
+      else showToast('현재 음성 입력을 먼저 마쳐 주세요.');
+      return;
+    }
+    const target = form.elements.namedItem(button.dataset.voiceTarget);
+    if (!target) return;
+
+    const recognition = new Recognition();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    activeRecognition = recognition;
+    activeRecognitionButton = button;
+    recognitionHadResult = false;
+    button.textContent = '■ 음성 입력 중지';
+    form.querySelectorAll('[data-voice-target]').forEach((control) => {
+      if (control !== button) control.disabled = true;
+    });
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (!transcript) return;
+      const separator = target instanceof HTMLTextAreaElement ? '\n' : ' ';
+      target.value = [target.value.trim(), transcript].filter(Boolean).join(separator);
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      recognitionHadResult = true;
+    };
+    recognition.onerror = (event) => {
+      const message = event.error === 'not-allowed'
+        ? '마이크 사용을 허용해 주세요.'
+        : event.error === 'no-speech'
+          ? '음성이 들리지 않았어요. 다시 말씀해 주세요.'
+          : '음성을 입력하지 못했어요. 직접 입력해 주세요.';
+      showToast(message);
+    };
+    recognition.onend = () => {
+      const hadResult = recognitionHadResult;
+      activeRecognition = null;
+      activeRecognitionButton = null;
+      button.textContent = button.dataset.voiceLabel || '🎙 음성 입력';
+      form.querySelectorAll('[data-voice-target]').forEach((control) => { control.disabled = false; });
+      if (hadResult) showToast('음성을 입력했어요. 내용을 확인해 주세요.');
+    };
+    try {
+      recognition.start();
+    } catch (_) {
+      activeRecognition = null;
+      activeRecognitionButton = null;
+      button.textContent = button.dataset.voiceLabel || '🎙 음성 입력';
+      form.querySelectorAll('[data-voice-target]').forEach((control) => { control.disabled = false; });
+      showToast('음성 입력을 시작하지 못했어요. 다시 눌러 주세요.');
+    }
   }
 
   function normalizePost(row) {
@@ -72,6 +210,7 @@
       place: row.location,
       description: row.description || '',
       imageUrl: row.image_url || '',
+      verificationQuestion: row.verification_question || '',
       createdAt: row.created_at
     };
   }
@@ -112,7 +251,7 @@
     const typeName = post.type === 'lost' ? '분실' : '습득';
     const shareLabel = `${typeName} 소식 공유: ${post.title}`;
     const image = post.imageUrl
-      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="${escapeHTML(post.title)} 사진" loading="lazy">` : '';
+      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="블러 처리된 ${escapeHTML(post.title)} 사진" loading="lazy">` : '';
     return `<article class="post-card" data-post-id="${escapeHTML(post.id)}">
       <div class="card-top"><div class="card-badges">${typeBadge(post)}<span class="kind-badge">${escapeHTML(post.kind)}</span></div><time class="card-date" datetime="${escapeHTML(post.date)}">${prettyDate(post.date)}</time></div>
       ${image}<button type="button" class="card-title card-title-button" data-detail-id="${escapeHTML(post.id)}">${escapeHTML(post.title)}</button>
@@ -145,7 +284,7 @@
     const pageSize = 500;
     for (let offset = 0; ; offset += pageSize) {
       const { data, error } = await client.from('items')
-        .select('id,user_id,item_type,status,title,description,category,location,item_date,image_url,created_at')
+        .select('id,user_id,item_type,status,title,description,category,location,item_date,image_url,verification_question,created_at')
         .order('created_at', { ascending: false }).range(offset, offset + pageSize - 1);
       if (error) {
         backendAvailable = false;
@@ -213,7 +352,7 @@
     authForm.elements.password.autocomplete = isSignup ? 'new-password' : 'current-password';
     document.querySelector('#auth-submit').textContent = isSignup ? '회원가입' : '로그인';
     document.querySelector('#auth-note').textContent = isSignup
-      ? '가입 후 이메일 인증이 필요할 수 있어요. 이름은 게시판에서 표시됩니다.'
+      ? 'ewha.ac.kr 또는 ewhain.net 이메일만 가입할 수 있어요. 이름은 게시판에서 표시됩니다.'
       : '게시물을 등록하고 관리하려면 로그인해 주세요.';
     document.querySelector('#toggle-auth-mode').textContent = isSignup
       ? '이미 계정이 있나요? 로그인' : '처음 오셨나요? 회원가입';
@@ -241,6 +380,9 @@
     }
     editingPost = null;
     form.reset();
+    form.elements.verification_answer.required = true;
+    form.elements.verification_answer.placeholder = '정답은 게시글에 공개되지 않아요.';
+    document.querySelector('#gps-status').textContent = 'GPS는 선택사항이며 장소를 직접 입력할 수도 있어요.';
     dateField.value = todayISO();
     document.querySelector('#char-count').textContent = '0';
     document.querySelector('#form-save-note').textContent = '등록한 내용은 Supabase에 안전하게 저장됩니다.';
@@ -261,6 +403,9 @@
     form.elements.date.value = post.date;
     form.elements.place.value = post.place;
     form.elements.description.value = post.description;
+    form.elements.verification_question.value = post.verificationQuestion;
+    form.elements.verification_answer.required = false;
+    form.elements.verification_answer.placeholder = '확인 답변을 바꾸려면 새 답을 입력해 주세요.';
     document.querySelector('#char-count').textContent = post.description.length;
     document.querySelector('#form-save-note').textContent = '수정한 내용이 Supabase에 저장됩니다.';
     document.querySelector('#submit-post').innerHTML = '수정 내용 저장 <span aria-hidden="true">↗</span>';
@@ -311,7 +456,7 @@
 
   function openDetail(post) {
     const image = post.imageUrl
-      ? `<img class="detail-image" src="${escapeHTML(post.imageUrl)}" alt="${escapeHTML(post.title)} 사진">` : '';
+      ? `<img class="detail-image" src="${escapeHTML(post.imageUrl)}" alt="블러 처리된 ${escapeHTML(post.title)} 사진">` : '';
     const ownActions = session?.user?.id === post.ownerId
       ? '<button class="button button-outline" type="button" data-open-my-posts>내 게시물 관리</button>' : '';
     document.querySelector('#detail-content').innerHTML = `${image}
@@ -319,13 +464,44 @@
       <h3 class="detail-title">${escapeHTML(post.title)}</h3>
       <div class="detail-meta"><div><span>장소</span>${escapeHTML(post.place)}</div><div><span>날짜</span>${prettyDate(post.date)}</div><div><span>상태</span>${post.status === 'returned' ? '반환 완료' : '진행 중'}</div><div><span>유형</span>${post.type === 'lost' ? '분실' : '습득'}</div></div>
       <p class="detail-description">${escapeHTML(post.description || '추가 설명이 없습니다.')}</p>
+      ${ownActions || post.status !== 'open' ? '' : `<section class="claim-box"><h4>물건 확인하기</h4><p>${escapeHTML(post.verificationQuestion || '게시자가 확인 질문을 등록하지 않았어요.')}</p>${post.verificationQuestion ? `<form id="claim-answer-form" data-item-id="${escapeHTML(post.id)}"><label class="field"><span>답변</span><input name="answer" required maxlength="120" autocomplete="off" placeholder="물건의 특징을 입력해 주세요."></label><button class="button button-dark" type="submit">답변 확인</button></form><div id="claim-result" aria-live="polite"></div>` : ''}</section>`}
       <div class="detail-actions"><button class="button button-outline" type="button" data-share-id="${escapeHTML(post.id)}">공유</button>${ownActions}</div>`;
     detailDialog.showModal();
   }
 
+  async function verifyItemAnswer(event) {
+    event.preventDefault();
+    const answerForm = event.target.closest('#claim-answer-form');
+    if (!answerForm) return;
+    if (!answerForm.reportValidity()) return;
+    if (!session) return openAuth('login');
+    const button = answerForm.querySelector('button[type="submit"]');
+    const resultBox = document.querySelector('#claim-result');
+    button.disabled = true;
+    try {
+      const { data, error } = await client.rpc('verify_item_answer', {
+        p_item_id: answerForm.dataset.itemId,
+        p_answer: answerForm.elements.answer.value.trim()
+      });
+      if (error) throw error;
+      const result = Array.isArray(data) ? data[0] : data;
+      if (result?.is_match && result.contact_email) {
+        const post = posts.find((item) => item.id === answerForm.dataset.itemId);
+        resultBox.innerHTML = `<p>확인됐어요. 아래 버튼으로 등록자에게 연락해 주세요.</p><a class="button button-dark" href="mailto:${escapeHTML(result.contact_email)}?subject=${encodeURIComponent(`[다시, 너에게] ${post?.title || '분실물 문의'}`)}">등록자에게 이메일 보내기</a>`;
+        answerForm.hidden = true;
+      } else {
+        resultBox.textContent = '답변이 일치하지 않거나 확인 시도가 잠시 제한됐어요.';
+      }
+    } catch (error) {
+      resultBox.textContent = error.message || '답변을 확인하지 못했어요.';
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function renderMyPost(post) {
     const image = post.imageUrl
-      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="${escapeHTML(post.title)} 사진" loading="lazy">` : '';
+      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="블러 처리된 ${escapeHTML(post.title)} 사진" loading="lazy">` : '';
     return `<article class="my-post-card" data-my-post-id="${escapeHTML(post.id)}">
       <div class="card-top"><div class="card-badges">${typeBadge(post)}<span class="kind-badge">${escapeHTML(post.kind)}</span></div><time class="card-date">${prettyDate(post.date)}</time></div>
       ${image}<h3 class="card-title">${escapeHTML(post.title)}</h3><p class="card-description">${escapeHTML(post.description || '추가 설명이 없습니다.')}</p>
@@ -338,7 +514,7 @@
     myPostList.innerHTML = '<p class="my-post-empty">내 게시물을 불러오는 중이에요.</p>';
     if (!myPostsDialog.open) myPostsDialog.showModal();
     const { data, error } = await client.from('items')
-      .select('id,user_id,item_type,status,title,description,category,location,item_date,image_url,created_at')
+      .select('id,user_id,item_type,status,title,description,category,location,item_date,image_url,verification_question,created_at')
       .eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(500);
     if (error) {
       myPostList.innerHTML = '<p class="my-post-empty">내 게시물을 불러오지 못했어요.</p>';
@@ -403,10 +579,11 @@
     if (!file) return null;
     if (!IMAGE_TYPES.has(file.type)) throw new Error('JPG, PNG, WEBP 사진만 등록할 수 있어요.');
     if (file.size > MAX_IMAGE_SIZE) throw new Error('사진은 5MB 이하로 선택해 주세요.');
-    const extension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' })[file.type];
+    const blurredFile = await makeBlurredImage(file);
+    const extension = 'webp';
     const objectPath = `${userId}/${postId}/${crypto.randomUUID()}.${extension}`;
-    const { error } = await client.storage.from(BUCKET).upload(objectPath, file, {
-      cacheControl: '3600', upsert: false, contentType: file.type
+    const { error } = await client.storage.from(BUCKET).upload(objectPath, blurredFile, {
+      cacheControl: '3600', upsert: false, contentType: 'image/webp'
     });
     if (error) throw error;
     return { path: objectPath, url: client.storage.from(BUCKET).getPublicUrl(objectPath).data.publicUrl };
@@ -416,10 +593,16 @@
     event.preventDefault();
     if (!form.reportValidity()) return;
     if (!session) return openAuth('login');
+    const file = form.elements.image.files?.[0] || null;
+    const verificationAnswer = form.elements.verification_answer.value.trim();
+    const verificationQuestion = form.elements.verification_question.value.trim();
+    const previousPost = editingPost;
+    if (previousPost && !verificationAnswer && verificationQuestion !== previousPost.verificationQuestion) {
+      showToast('확인 질문을 바꾸려면 정답도 새로 입력해 주세요.');
+      return;
+    }
     const submitButton = document.querySelector('#submit-post');
     submitButton.disabled = true;
-    const file = form.elements.image.files?.[0] || null;
-    const previousPost = editingPost;
     const postId = previousPost?.id || crypto.randomUUID();
     let uploaded = null;
     try {
@@ -433,8 +616,10 @@
         item_date: String(data.get('date')),
         image_url: uploaded?.url || previousPost?.imageUrl || null,
         item_type: activeFormType,
-        status: previousPost?.status || 'open'
+        status: previousPost?.status || 'open',
+        verification_question: verificationQuestion
       };
+      if (!previousPost || verificationAnswer) payload.verification_answer_hash = verificationAnswer;
       let query = previousPost
         ? client.from('items').update(payload).eq('id', postId).eq('user_id', session.user.id)
         : client.from('items').insert({ ...payload, id: postId, user_id: session.user.id });
@@ -447,6 +632,8 @@
       showToast(previousPost ? '게시물을 수정했어요.' : '소식을 등록했어요.');
       editingPost = null;
       form.reset();
+      form.elements.verification_answer.required = true;
+      form.elements.verification_answer.placeholder = '정답은 게시글에 공개되지 않아요.';
       dateField.value = todayISO();
       document.querySelector('#char-count').textContent = '0';
       formSection.hidden = true;
@@ -468,9 +655,13 @@
     event.preventDefault();
     if (!authForm.reportValidity()) return;
     if (!client) return showToast('Supabase 설정이 없어 로그인할 수 없어요.');
+    const email = authForm.elements.email.value.trim();
+    if (!isEwhaEmail(email)) {
+      showToast('ewha.ac.kr 또는 ewhain.net 이메일만 사용할 수 있어요.');
+      return;
+    }
     const submit = document.querySelector('#auth-submit');
     submit.disabled = true;
-    const email = authForm.elements.email.value.trim();
     const password = authForm.elements.password.value;
     try {
       if (authMode === 'signup') {
@@ -480,14 +671,14 @@
           password,
           options: {
             data: { display_name: displayName },
-            emailRedirectTo: window.location.href.split('#')[0]
+            emailRedirectTo: getAuthRedirectUrl()
           }
         });
         if (error) throw error;
         authDialog.close();
         authForm.reset();
         if (data.session) showToast('회원가입과 로그인이 완료됐어요.');
-        else showToast('인증 이메일을 확인한 뒤 로그인해 주세요.');
+        else showToast('인증 이메일의 링크를 눌러 가입을 완료해 주세요. 이 페이지로 돌아옵니다.');
       } else {
         const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -524,6 +715,7 @@
     render();
   });
   document.querySelector('#close-form').addEventListener('click', () => {
+    if (activeRecognition) activeRecognition.stop();
     formSection.hidden = true;
     editingPost = null;
   });
@@ -544,6 +736,11 @@
     document.querySelector('#char-count').textContent = event.target.value.length;
   });
   form.addEventListener('submit', savePost);
+  document.querySelector('#use-current-location').addEventListener('click', getCurrentLocation);
+  document.querySelectorAll('[data-voice-target]').forEach((button) => {
+    button.dataset.voiceLabel = button.textContent;
+    button.addEventListener('click', () => startVoiceInput(button));
+  });
 
   document.querySelector('#open-auth').addEventListener('click', () => openAuth('login'));
   document.querySelector('#account-menu-button').addEventListener('click', () => {
@@ -580,6 +777,9 @@
       detailDialog.close();
       void loadMyPosts();
     }
+  });
+  document.querySelector('#detail-content').addEventListener('submit', (event) => {
+    if (event.target.matches('#claim-answer-form')) void verifyItemAnswer(event);
   });
   myPostList.addEventListener('click', (event) => {
     const edit = event.target.closest('[data-edit-id]');

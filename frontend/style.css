@@ -60,3 +60,6 @@
 @media(max-width:1000px){.account-actions{gap:4px}.account-button{padding:7px 9px}}
 @media(max-width:720px){.topbar{gap:12px}.account-actions{gap:4px}.account-button{font-size:8px;padding:7px 8px}.site-dialog{width:min(520px,calc(100vw - 20px));max-height:calc(100vh - 20px)}.site-dialog-wide{width:min(760px,calc(100vw - 20px))}.dialog-panel{padding:20px}.my-post-list{grid-template-columns:1fr 1fr}}
 @media(max-width:420px){.topbar{gap:7px;padding-left:12px;padding-right:12px}.top-nav{gap:7px;font-size:8px}.brand{gap:6px}.brand small{display:none}.brand strong{font-size:11px}.brand-mark{width:27px;height:27px}.account-actions{gap:3px}.account-button{font-size:8px;padding:6px 7px}.campus-tag{display:none}.dialog-panel{padding:16px}.detail-meta{grid-template-columns:1fr}.my-post-list{grid-template-columns:1fr}}
+.close-form{position:relative;display:grid;place-items:center;padding:0;line-height:1;font-size:0;color:transparent}
+.close-form::before,.close-form::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:2px;border-radius:1px;background:#68756a;transform:translate(-50%,-50%) rotate(45deg)}
+.close-form::after{transform:translate(-50%,-50%) rotate(-45deg)}

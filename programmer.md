@@ -1,7 +1,7 @@
 # 프로그래머 상태 — 오른쪽 창
 
 관리 담당: 오른쪽 Codex 창
-마지막 업데이트: 2026-11-03 16:18 KST
+마지막 업데이트: 2026-11-04 14:53 KST
 
 ## 역할
 
@@ -12,7 +12,7 @@
 
 ## 현재 작업
 
-- CAMPUS BOARD Supabase 연동 구현 완료. 기존 페이지의 색상·폰트·여백·카드 배치는 유지하고 계정 메뉴와 대화상자만 추가했습니다.
+- 사용자가 요청한 캠퍼스 분실물 서비스 기능을 구현하고 Supabase 신규 프로젝트에 연결했습니다. 프론트엔드는 로컬 3000번 포트에서 실행 중입니다.
 
 ## 구현 요약
 
@@ -21,7 +21,7 @@
 - 문서: 실행과 Supabase 설정을 [README.md](README.md)에 정리했습니다.
 - 이메일 회원가입/로그인/로그아웃, Auth 프로필 표시, 로그인 필수 게시물 등록, Supabase Storage 사진 업로드, 게시물 상세 조회, 소유자 편집·삭제, 진행 중/반환 완료 변경, 제목·설명·종류·장소 검색과 내 게시물을 연결했습니다.
 - `user_id`는 인증 세션에서 가져오고 수정·삭제 쿼리에도 현재 사용자 ID를 조건으로 넣습니다. RLS가 DB 수준에서 소유권을 재확인합니다. service_role 키는 사용하지 않았습니다.
-- 원격 Supabase 변경: 기존 `items.status`를 `item_type`으로 보존하고 처리 상태를 `open`/`returned`로 분리했습니다. `campus-item-images` 공개 버킷은 JPEG/PNG/WEBP, 5 MiB 제한이며 업로드·수정·삭제 정책은 사용자 UUID 폴더와 파일 소유권을 검사합니다.
+- 원격 Supabase 프로젝트 `campus_lost_found` (ref: `mjilpewyfesgdgcmsuna`)에 세 SQL 파일을 적용했습니다. `items.status`는 `item_type`으로 보존하고 처리 상태를 `open`/`returned`로 분리했습니다. `campus-item-images` 공개 버킷은 JPEG/PNG/WEBP, 5 MiB 제한이며 업로드·수정·삭제 정책은 사용자 UUID 폴더와 파일 소유권을 검사합니다.
 - 화면은 메모리 샘플 대신 Supabase 게시물을 표시합니다. 로그인/상세/내 게시물은 기존 색상과 필드 스타일을 사용한 대화상자로 열립니다.
 
 ## 확인 결과와 남은 일
@@ -30,6 +30,21 @@
 - 통과: Supabase 공개 `items` 조회와 Auth 설정 조회 HTTP 200, 이메일 가입 허용 상태. localhost:3000에서 페이지·설정·앱 스크립트 HTTP 200.
 - 제한: Orca가 접근성 권한 오류를 내 브라우저 UI 검증을 진행하지 못했습니다. Supabase MCP에도 Auth 테스트 사용자 생성·삭제 기능이 없어 별도 계정과 이메일 인증을 만들지 않았습니다. 따라서 회원가입 확인 메일, 인증 로그인, 이미지 업로드·수정·삭제의 사용자 시나리오는 끝까지 실행하지 않았습니다.
 - 배포 전 실제 도메인을 Supabase Auth Redirect URLs에 추가해야 합니다. 로컬 실행 주소는 `http://localhost:3000`입니다. 공통 상태와 작업 이력은 [status.md](status.md)에 있습니다.
+
+## 추가 요청 기능 진행 상태
+
+- `frontend/index.html`, `frontend/app.js`, `frontend/features.css`: 이화여대 이메일 회원가입, 모바일 카메라 촬영, 업로드 전 사진 블러, GPS 역지오코딩, 확인 질문·정답 검증 후 등록자 이메일 공개, 제목·장소·설명·질문·정답의 한국어 음성 입력을 연결했습니다.
+- `supabase/ewha_features.sql`: Auth DB 도메인 트리거, 확인 답변 해시, 15분당 5회 제한, 정답일 때 이메일을 반환하는 RPC를 추가했습니다.
+- GPS 역지오코딩은 사용자가 버튼을 눌렀을 때만 요청합니다. 좌표는 Photon/OpenStreetMap으로 전송되지만 데이터베이스에는 저장하지 않고, 찾은 장소명만 게시물에 저장합니다. 건물명을 찾지 못하면 직접 입력할 수 있습니다.
+- 이메일 가입의 `emailRedirectTo`는 HTTP 사이트 주소를 사용하고, `file://`로 열린 경우 `http://localhost:3000/`으로 돌아오게 했습니다. Supabase MCP에는 Auth URL Configuration을 변경하는 도구가 없고 Orca GUI 접근성 권한도 없어 대시보드의 Site URL/Redirect URLs는 직접 변경하지 못했습니다. 해당 설정에는 배포 주소와 `http://localhost:3000/**`를 등록해야 합니다.
+- 사용자가 선택한 GPS 표시 방식은 게시 시 위치를 가져와 캠퍼스 건물 단위로 표시하는 것입니다. 사진 공개 범위와 검증 후 연락 방식에 관한 확인 답변은 아직 도착하지 않아 기본안(블러본만 저장, 정답이면 이메일 공개)으로 작성했습니다.
+
+## 2026-11-04 추가 요청
+
+- 회원가입 인증 메일이 사이트로 돌아오지 않는 문제에 대응해 `file://` 주소에서 가입할 때 로컬 HTTP 주소를 사용하도록 수정하고, 안내 문구를 보완했습니다.
+- 음성 입력은 Web Speech API가 지원되는 브라우저에서 한국어를 인식해 입력란에 넣습니다. 게시물은 사용자가 직접 제출합니다.
+- 새 로컬 서버 `http://localhost:3000/`에 접속해 HTML이 HTTP 200으로 응답하는 것을 확인했습니다. 실제 이메일 인증 클릭은 사용자 계정이 필요해 진행하지 않았습니다.
+- 남은 설정: Supabase Dashboard → Authentication → URL Configuration에서 실제 배포 주소를 Site URL로 지정하고, `http://localhost:3000/**` 및 실제 배포 주소를 Redirect URLs에 추가해야 합니다.
 
 ## 최근 수정
 
