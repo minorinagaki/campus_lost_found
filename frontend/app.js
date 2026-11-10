@@ -24,6 +24,12 @@
   let activeRecognition = null;
   let activeRecognitionButton = null;
   let recognitionHadResult = false;
+  let activeRecorder = null;
+  let activeRecorderStream = null;
+  let activeRecorderButton = null;
+  let voiceProcessing = false;
+  let voiceStopTimer = null;
+  let whisperTranscriberPromise = null;
 
   const list = document.querySelector('#post-list');
   const keyword = document.querySelector('#keyword');
@@ -137,10 +143,158 @@
     return `${window.location.origin}${window.location.pathname}`;
   }
 
+  function setVoiceStatus(message) {
+    const status = document.querySelector('#voice-status');
+    if (status) status.textContent = message;
+  }
+
+  function restoreVoiceControls(button) {
+    if (button) button.textContent = button.dataset.voiceLabel || '🎙 음성 입력';
+    form.querySelectorAll('[data-voice-target]').forEach((control) => { control.disabled = false; });
+  }
+
+  function appendVoiceText(target, transcript) {
+    const separator = target instanceof HTMLTextAreaElement ? '\n' : ' ';
+    const value = [target.value.trim(), transcript.trim()].filter(Boolean).join(separator);
+    target.value = target.maxLength > 0 ? value.slice(0, target.maxLength) : value;
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  async function getWhisperTranscriber() {
+    if (!whisperTranscriberPromise) {
+      setVoiceStatus('음성 인식 모델을 준비하고 있어요. 처음에는 다운로드에 시간이 걸릴 수 있어요.');
+      const moduleUrl = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm';
+      whisperTranscriberPromise = import(moduleUrl)
+        .then(({ pipeline }) => pipeline(
+          'automatic-speech-recognition',
+          'onnx-community/whisper-tiny',
+          { dtype: 'q8' }
+        ))
+        .catch((error) => {
+          whisperTranscriberPromise = null;
+          throw error;
+        });
+    }
+    return whisperTranscriberPromise;
+  }
+
+  async function transcribeRecordedAudio(blob) {
+    const AudioContextType = window.AudioContext || window.webkitAudioContext;
+    const OfflineAudioContextType = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!AudioContextType || !OfflineAudioContextType) {
+      throw new Error('이 브라우저에서는 녹음 음성을 변환할 수 없어요. Chrome이나 Edge를 사용해 주세요.');
+    }
+
+    const audioContext = new AudioContextType();
+    let samples;
+    try {
+      const decoded = await audioContext.decodeAudioData(await blob.arrayBuffer());
+      if (decoded.duration > 30) throw new Error('한 번에 30초 이내로 말씀해 주세요.');
+      const mono = audioContext.createBuffer(1, decoded.length, decoded.sampleRate);
+      const monoSamples = mono.getChannelData(0);
+      for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+        const channelSamples = decoded.getChannelData(channel);
+        for (let index = 0; index < decoded.length; index += 1) {
+          monoSamples[index] += channelSamples[index] / decoded.numberOfChannels;
+        }
+      }
+
+      const outputLength = Math.ceil(decoded.duration * 16000);
+      const offlineContext = new OfflineAudioContextType(1, outputLength, 16000);
+      const source = offlineContext.createBufferSource();
+      source.buffer = mono;
+      source.connect(offlineContext.destination);
+      source.start();
+      samples = (await offlineContext.startRendering()).getChannelData(0);
+    } finally {
+      await audioContext.close();
+    }
+
+    setVoiceStatus('녹음한 음성을 기기에서 글자로 바꾸고 있어요.');
+    const transcriber = await getWhisperTranscriber();
+    const result = await transcriber(samples, { language: 'korean', task: 'transcribe' });
+    return String(result?.text || '').trim();
+  }
+
+  async function startRecordedVoiceInput(button, target) {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      showToast('이 브라우저에서는 마이크 녹음을 지원하지 않아요. Chrome이나 Edge를 사용해 주세요.');
+      return;
+    }
+    voiceProcessing = true;
+    activeRecorderButton = button;
+    button.textContent = '마이크 준비 중…';
+    form.querySelectorAll('[data-voice-target]').forEach((control) => { control.disabled = true; });
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm']
+        .find((type) => MediaRecorder.isTypeSupported?.(type));
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const chunks = [];
+      activeRecorder = recorder;
+      activeRecorderStream = stream;
+      voiceProcessing = false;
+      button.textContent = '■ 녹음 완료';
+      form.querySelectorAll('[data-voice-target]').forEach((control) => {
+        if (control !== button) control.disabled = true;
+      });
+      recorder.addEventListener('dataavailable', (event) => {
+        if (event.data?.size) chunks.push(event.data);
+      });
+      recorder.addEventListener('stop', async () => {
+        activeRecorder = null;
+        voiceProcessing = true;
+        button.textContent = '음성 인식 중…';
+        setVoiceStatus('녹음한 음성을 처리하고 있어요.');
+        try {
+          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          if (!blob.size) throw new Error('녹음된 음성이 없어요. 다시 말씀해 주세요.');
+          const transcript = await transcribeRecordedAudio(blob);
+          if (!transcript) throw new Error('음성을 알아듣지 못했어요. 다시 말씀해 주세요.');
+          appendVoiceText(target, transcript);
+          setVoiceStatus('음성을 입력했어요. 입력된 문장을 확인해 주세요.');
+          showToast('음성을 입력했어요. 내용을 확인해 주세요.');
+        } catch (error) {
+          setVoiceStatus(error.message || '음성을 입력하지 못했어요.');
+          showToast(error.message || '음성을 입력하지 못했어요.');
+        } finally {
+          if (voiceStopTimer) clearTimeout(voiceStopTimer);
+          voiceStopTimer = null;
+          stream.getTracks().forEach((track) => track.stop());
+          activeRecorderStream = null;
+          activeRecorderButton = null;
+          voiceProcessing = false;
+          restoreVoiceControls(button);
+        }
+      }, { once: true });
+      recorder.start();
+      voiceStopTimer = setTimeout(() => {
+        if (activeRecorder === recorder && recorder.state === 'recording') recorder.stop();
+      }, 30000);
+    } catch (error) {
+      stream?.getTracks().forEach((track) => track.stop());
+      activeRecorder = null;
+      activeRecorderStream = null;
+      activeRecorderButton = null;
+      voiceProcessing = false;
+      restoreVoiceControls(button);
+      const message = error.name === 'NotAllowedError'
+        ? '마이크 사용을 허용해 주세요.'
+        : error.message || '녹음을 시작하지 못했어요.';
+      setVoiceStatus(message);
+      showToast(message);
+    }
+  }
+
   function startVoiceInput(button) {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) {
-      showToast('이 브라우저는 음성 입력을 지원하지 않아요. 키보드로 입력해 주세요.');
+    if (activeRecorder) {
+      if (activeRecorderButton === button && activeRecorder.state === 'recording') activeRecorder.stop();
+      else showToast('현재 음성 입력을 먼저 마쳐 주세요.');
+      return;
+    }
+    if (voiceProcessing) {
+      showToast('음성 입력을 처리하고 있어요. 잠시 기다려 주세요.');
       return;
     }
     if (activeRecognition) {
@@ -150,6 +304,12 @@
     }
     const target = form.elements.namedItem(button.dataset.voiceTarget);
     if (!target) return;
+
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      void startRecordedVoiceInput(button, target);
+      return;
+    }
 
     const recognition = new Recognition();
     recognition.lang = 'ko-KR';
@@ -166,9 +326,7 @@
     recognition.onresult = (event) => {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim();
       if (!transcript) return;
-      const separator = target instanceof HTMLTextAreaElement ? '\n' : ' ';
-      target.value = [target.value.trim(), transcript].filter(Boolean).join(separator);
-      target.dispatchEvent(new Event('input', { bubbles: true }));
+      appendVoiceText(target, transcript);
       recognitionHadResult = true;
     };
     recognition.onerror = (event) => {
@@ -176,15 +334,21 @@
         ? '마이크 사용을 허용해 주세요.'
         : event.error === 'no-speech'
           ? '음성이 들리지 않았어요. 다시 말씀해 주세요.'
-          : '음성을 입력하지 못했어요. 직접 입력해 주세요.';
+          : '브라우저 음성 인식을 사용할 수 없어요. 다시 눌러 기기 내 음성 인식을 시도해 주세요.';
+      if (event.error !== 'not-allowed' && event.error !== 'no-speech') {
+        recognition.onend = () => {
+          activeRecognition = null;
+          activeRecognitionButton = null;
+          void startRecordedVoiceInput(button, target);
+        };
+      }
       showToast(message);
     };
     recognition.onend = () => {
       const hadResult = recognitionHadResult;
       activeRecognition = null;
       activeRecognitionButton = null;
-      button.textContent = button.dataset.voiceLabel || '🎙 음성 입력';
-      form.querySelectorAll('[data-voice-target]').forEach((control) => { control.disabled = false; });
+      restoreVoiceControls(button);
       if (hadResult) showToast('음성을 입력했어요. 내용을 확인해 주세요.');
     };
     try {
@@ -192,9 +356,7 @@
     } catch (_) {
       activeRecognition = null;
       activeRecognitionButton = null;
-      button.textContent = button.dataset.voiceLabel || '🎙 음성 입력';
-      form.querySelectorAll('[data-voice-target]').forEach((control) => { control.disabled = false; });
-      showToast('음성 입력을 시작하지 못했어요. 다시 눌러 주세요.');
+      void startRecordedVoiceInput(button, target);
     }
   }
 
