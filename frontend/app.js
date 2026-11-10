@@ -577,8 +577,8 @@
   }
 
   function setFormType(type) {
-    activeFormType = type;
-    const found = type === 'found';
+    activeFormType = type === 'found' ? 'found' : 'lost';
+    const found = activeFormType === 'found';
     document.querySelector('#form-title').textContent = found ? '습득 소식 남기기.' : '분실 소식 남기기.';
     document.querySelector('#form-intro').textContent = found
       ? '주인을 기다리는 물건의 정보를 적어주세요.' : '잃어버린 물건을 알아볼 수 있게 적어주세요.';
@@ -833,7 +833,8 @@
         location: String(data.get('place')).trim(),
         item_date: String(data.get('date')),
         image_url: uploaded?.url || previousPost?.imageUrl || null,
-        item_type: activeFormType,
+        item_type: form.querySelector('[data-form-type][aria-pressed="true"]')?.dataset.formType === 'found'
+          ? 'found' : 'lost',
         status: previousPost?.status || 'open',
         verification_question: verificationQuestion
       };
