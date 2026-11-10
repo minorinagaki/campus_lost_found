@@ -87,48 +87,104 @@
     return new File([blob], 'campus-item-blurred.webp', { type: 'image/webp' });
   }
 
-  function getCurrentLocation() {
-    if (!navigator.geolocation) return showToast('이 브라우저에서는 GPS를 사용할 수 없어요.');
+  function requestBrowserPosition(options) {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  }
+
+  async function getGeolocationPermissionState() {
+    if (!navigator.permissions?.query) return 'unknown';
+    try {
+      return (await navigator.permissions.query({ name: 'geolocation' })).state;
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  function describeLocationError(error, permissionState) {
+    const code = Number(error?.code);
+    if (code === 1) {
+      return permissionState === 'granted'
+        ? '이 사이트는 허용 상태지만 브라우저나 기기가 위치 요청을 거절했어요. 주소창의 사이트 설정과 기기 위치 서비스를 확인해 주세요.'
+        : '현재 사이트 주소의 위치 권한을 확인해 주세요. 주소창의 사이트 설정에서 위치를 허용한 뒤 다시 눌러 주세요.';
+    }
+    if (code === 2) return '기기에서 위치 정보를 받지 못했어요. 기기의 위치 서비스와 Wi-Fi를 켠 뒤 다시 시도해 주세요.';
+    if (code === 3) return '위치 조회가 시간 초과됐어요. 잠시 기다려 다시 누르거나 장소를 직접 입력해 주세요.';
+    return '현재 위치를 확인하지 못했어요. 장소를 직접 입력해 주세요.';
+  }
+
+  async function lookupPlaceName(coords) {
+    const cacheKey = `campus-place-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
+    let placeName = sessionStorage.getItem(cacheKey);
+    if (!placeName) {
+      const url = new URL('https://photon.komoot.io/reverse');
+      url.searchParams.set('lat', coords.latitude);
+      url.searchParams.set('lon', coords.longitude);
+      url.searchParams.set('limit', '1');
+      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error('주변 건물 검색 서비스에 연결하지 못했어요.');
+      const result = await response.json();
+      const properties = result.features?.[0]?.properties;
+      placeName = properties?.name || properties?.building || properties?.street || '';
+      if (placeName) sessionStorage.setItem(cacheKey, placeName);
+    }
+    return placeName;
+  }
+
+  async function getCurrentLocation() {
+    if (!navigator.geolocation) return showToast('이 브라우저는 위치 조회를 지원하지 않아요. 장소를 직접 입력해 주세요.');
+    if (!window.isSecureContext) return showToast('GPS를 사용하려면 HTTPS 사이트 또는 localhost로 접속해 주세요.');
+
     const button = document.querySelector('#use-current-location');
     const note = document.querySelector('#gps-status');
+    if (button.disabled) return;
+    const originalLabel = button.textContent;
     button.disabled = true;
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      note.textContent = '주변 건물명을 찾고 있어요. 정확한 GPS 좌표는 게시글에 공개되지 않습니다.';
+    button.textContent = '위치 찾는 중…';
+    note.textContent = '현재 사이트의 위치 권한과 기기 위치를 확인하고 있어요.';
+
+    try {
+      const permissionState = await getGeolocationPermissionState();
+      let position;
       try {
-        const cacheKey = `campus-place-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`;
-        let placeName = sessionStorage.getItem(cacheKey);
-        if (!placeName) {
-          const url = new URL('https://photon.komoot.io/reverse');
-          url.searchParams.set('lat', coords.latitude);
-          url.searchParams.set('lon', coords.longitude);
-          url.searchParams.set('limit', '1');
-          const response = await fetch(url, { headers: { Accept: 'application/json' } });
-          if (!response.ok) throw new Error('위치 검색 서비스에 연결할 수 없어요.');
-          const result = await response.json();
-          const properties = result.features?.[0]?.properties;
-          placeName = properties?.name || properties?.building || properties?.street || '';
-          if (placeName) sessionStorage.setItem(cacheKey, placeName);
-        }
-        if (placeName) {
-          form.elements.place.value = placeName.slice(0, 50);
-          note.textContent = `주변 장소를 찾았어요: ${placeName}. 건물명과 층을 확인해 주세요.`;
-          showToast('GPS로 주변 장소를 찾았어요. 건물명과 층을 확인해 주세요.');
-        } else {
-          note.textContent = '주변 건물을 찾지 못했어요. 장소를 직접 입력해 주세요.';
-          showToast('장소에 건물명을 직접 적어 주세요.');
-        }
-      } catch (_) {
-        note.textContent = '건물명 검색에 실패했어요. 장소를 직접 입력해 주세요.';
-        showToast('건물명은 직접 입력해 주세요.');
-      } finally {
-        button.disabled = false;
+        position = await requestBrowserPosition({
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 60000
+        });
+      } catch (firstError) {
+        const firstCode = Number(firstError?.code);
+        if (firstCode !== 2 && firstCode !== 3) throw firstError;
+        note.textContent = '위치를 더 정확하게 다시 확인하고 있어요.';
+        position = await requestBrowserPosition({
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 120000
+        });
       }
-    }, (error) => {
+
+      note.textContent = '주변 건물명을 찾고 있어요. 정확한 GPS 좌표는 게시글에 공개되지 않습니다.';
+      const placeName = await lookupPlaceName(position.coords);
+      if (!placeName) {
+        note.textContent = '주변 건물을 찾지 못했어요. 건물명과 층을 직접 입력해 주세요.';
+        showToast('GPS 위치는 확인했지만 건물을 찾지 못했어요.');
+        return;
+      }
+      form.elements.place.value = placeName.slice(0, 50);
+      form.elements.place.dispatchEvent(new Event('input', { bubbles: true }));
+      note.textContent = `주변 장소를 찾았어요: ${placeName}. 건물명과 층을 확인해 주세요.`;
+      showToast('GPS로 주변 장소를 찾았어요. 건물명과 층을 확인해 주세요.');
+    } catch (error) {
+      const message = error?.code
+        ? describeLocationError(error, await getGeolocationPermissionState())
+        : error?.message || '주변 건물을 찾지 못했어요. 장소를 직접 입력해 주세요.';
+      note.textContent = message;
+      showToast(message);
+    } finally {
       button.disabled = false;
-      note.textContent = '위치 권한을 허용하거나 장소를 직접 입력해 주세요.';
-      showToast(error.code === error.PERMISSION_DENIED
-        ? '브라우저에서 위치 권한을 허용해 주세요.' : '현재 위치를 확인하지 못했어요.');
-    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+      button.textContent = originalLabel;
+    }
   }
 
   function showToast(message) {
