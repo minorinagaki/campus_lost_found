@@ -10,5 +10,5 @@
 .field .voice-input{align-self:flex-start;padding:2px 0;text-decoration:none}
 .field .voice-input:disabled{opacity:.6;cursor:wait}
 .voice-note{margin:16px 0 0;color:#92998f;font-size:9px;line-height:1.6}
-.card-image,.detail-image{filter:blur(10px)}
+.card-image,.detail-image{filter:grayscale(1) blur(10px)}
 @media(max-width:560px){.claim-box{padding:14px}.claim-box form{align-items:stretch;flex-direction:column}.claim-box .button{width:100%}}

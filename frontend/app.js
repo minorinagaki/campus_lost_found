@@ -78,10 +78,29 @@
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const context = canvas.getContext('2d');
     const blurRadius = Math.max(12, Math.min(canvas.width, canvas.height) * 0.035);
-    context.filter = `${monochrome ? 'grayscale(1) ' : ''}blur(${blurRadius}px)`;
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    const blob = await new Promise((resolve, reject) => canvas.toBlob(
+    if (monochrome) {
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+      for (let index = 0; index < pixels.data.length; index += 4) {
+        const gray = Math.round(
+          pixels.data[index] * 0.2126 +
+          pixels.data[index + 1] * 0.7152 +
+          pixels.data[index + 2] * 0.0722
+        );
+        pixels.data[index] = gray;
+        pixels.data[index + 1] = gray;
+        pixels.data[index + 2] = gray;
+      }
+      context.putImageData(pixels, 0, 0);
+    }
+    const blurredCanvas = document.createElement('canvas');
+    blurredCanvas.width = canvas.width;
+    blurredCanvas.height = canvas.height;
+    const blurredContext = blurredCanvas.getContext('2d');
+    blurredContext.filter = `blur(${blurRadius}px)`;
+    blurredContext.drawImage(canvas, 0, 0);
+    const blob = await new Promise((resolve, reject) => blurredCanvas.toBlob(
       (result) => result ? resolve(result) : reject(new Error('사진 블러 처리에 실패했어요.')),
       'image/webp', 0.82
     ));
@@ -470,7 +489,7 @@
     const typeName = post.type === 'lost' ? '분실' : '습득';
     const shareLabel = `${typeName} 소식 공유: ${post.title}`;
     const image = post.imageUrl
-      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="블러 처리된 ${escapeHTML(post.title)} 사진" loading="lazy">` : '';
+      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="블러·흑백 처리된 ${escapeHTML(post.title)} 사진" loading="lazy">` : '';
     return `<article class="post-card" data-post-id="${escapeHTML(post.id)}">
       <div class="card-top"><div class="card-badges">${typeBadge(post)}<span class="kind-badge">${escapeHTML(post.kind)}</span></div><time class="card-date" datetime="${escapeHTML(post.date)}">${prettyDate(post.date)}</time></div>
       ${image}<button type="button" class="card-title card-title-button" data-detail-id="${escapeHTML(post.id)}">${escapeHTML(post.title)}</button>
@@ -675,7 +694,7 @@
 
   function openDetail(post) {
     const image = post.imageUrl
-      ? `<img class="detail-image" src="${escapeHTML(post.imageUrl)}" alt="블러 처리된 ${escapeHTML(post.title)} 사진">` : '';
+      ? `<img class="detail-image" src="${escapeHTML(post.imageUrl)}" alt="블러·흑백 처리된 ${escapeHTML(post.title)} 사진">` : '';
     const ownActions = session?.user?.id === post.ownerId
       ? '<button class="button button-outline" type="button" data-open-my-posts>내 게시물 관리</button>' : '';
     document.querySelector('#detail-content').innerHTML = `${image}
@@ -720,7 +739,7 @@
 
   function renderMyPost(post) {
     const image = post.imageUrl
-      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="블러 처리된 ${escapeHTML(post.title)} 사진" loading="lazy">` : '';
+      ? `<img class="card-image" src="${escapeHTML(post.imageUrl)}" alt="블러·흑백 처리된 ${escapeHTML(post.title)} 사진" loading="lazy">` : '';
     return `<article class="my-post-card" data-my-post-id="${escapeHTML(post.id)}">
       <div class="card-top"><div class="card-badges">${typeBadge(post)}<span class="kind-badge">${escapeHTML(post.kind)}</span></div><time class="card-date">${prettyDate(post.date)}</time></div>
       ${image}<h3 class="card-title">${escapeHTML(post.title)}</h3><p class="card-description">${escapeHTML(post.description || '추가 설명이 없습니다.')}</p>
