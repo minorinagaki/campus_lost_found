@@ -794,11 +794,11 @@
     await loadMyPosts();
   }
 
-  async function uploadImage(file, userId, postId, itemType) {
+  async function uploadImage(file, userId, postId) {
     if (!file) return null;
     if (!IMAGE_TYPES.has(file.type)) throw new Error('JPG, PNG, WEBP 사진만 등록할 수 있어요.');
     if (file.size > MAX_IMAGE_SIZE) throw new Error('사진은 5MB 이하로 선택해 주세요.');
-    const blurredFile = await makeBlurredImage(file, itemType === 'lost');
+    const blurredFile = await makeBlurredImage(file, true);
     const extension = 'webp';
     const objectPath = `${userId}/${postId}/${crypto.randomUUID()}.${extension}`;
     const { error } = await client.storage.from(BUCKET).upload(objectPath, blurredFile, {
@@ -827,7 +827,7 @@
       ? 'found' : 'lost';
     let uploaded = null;
     try {
-      uploaded = await uploadImage(file, session.user.id, postId, selectedType);
+      uploaded = await uploadImage(file, session.user.id, postId);
       const data = new FormData(form);
       const payload = {
         title: String(data.get('title')).trim(),
