@@ -69,7 +69,7 @@
     return at > 0 && EWHA_EMAIL_DOMAINS.has(email.slice(at + 1));
   }
 
-  async function makeBlurredImage(file) {
+  async function makeBlurredImage(file, monochrome = false) {
     if (!window.createImageBitmap) throw new Error('사진 블러 처리 기능을 지원하는 최신 브라우저가 필요해요.');
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
@@ -77,7 +77,8 @@
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const context = canvas.getContext('2d');
-    context.filter = `blur(${Math.max(12, Math.min(canvas.width, canvas.height) * 0.035)}px)`;
+    const blurRadius = Math.max(12, Math.min(canvas.width, canvas.height) * 0.035);
+    context.filter = `${monochrome ? 'grayscale(1) ' : ''}blur(${blurRadius}px)`;
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
     const blob = await new Promise((resolve, reject) => canvas.toBlob(
@@ -793,11 +794,11 @@
     await loadMyPosts();
   }
 
-  async function uploadImage(file, userId, postId) {
+  async function uploadImage(file, userId, postId, itemType) {
     if (!file) return null;
     if (!IMAGE_TYPES.has(file.type)) throw new Error('JPG, PNG, WEBP 사진만 등록할 수 있어요.');
     if (file.size > MAX_IMAGE_SIZE) throw new Error('사진은 5MB 이하로 선택해 주세요.');
-    const blurredFile = await makeBlurredImage(file);
+    const blurredFile = await makeBlurredImage(file, itemType === 'lost');
     const extension = 'webp';
     const objectPath = `${userId}/${postId}/${crypto.randomUUID()}.${extension}`;
     const { error } = await client.storage.from(BUCKET).upload(objectPath, blurredFile, {
@@ -822,9 +823,11 @@
     const submitButton = document.querySelector('#submit-post');
     submitButton.disabled = true;
     const postId = previousPost?.id || crypto.randomUUID();
+    const selectedType = form.querySelector('[data-form-type][aria-pressed="true"]')?.dataset.formType === 'found'
+      ? 'found' : 'lost';
     let uploaded = null;
     try {
-      uploaded = await uploadImage(file, session.user.id, postId);
+      uploaded = await uploadImage(file, session.user.id, postId, selectedType);
       const data = new FormData(form);
       const payload = {
         title: String(data.get('title')).trim(),
@@ -833,8 +836,7 @@
         location: String(data.get('place')).trim(),
         item_date: String(data.get('date')),
         image_url: uploaded?.url || previousPost?.imageUrl || null,
-        item_type: form.querySelector('[data-form-type][aria-pressed="true"]')?.dataset.formType === 'found'
-          ? 'found' : 'lost',
+        item_type: selectedType,
         status: previousPost?.status || 'open',
         verification_question: verificationQuestion
       };
